@@ -171,6 +171,22 @@
         </tbody>
     </table>
 
+    <table style="width: 100%; margin: 15px 0; border-collapse: collapse;">
+        <tr>
+            <td style="vertical-align: middle;">
+                <div style="font-size: 10px; font-weight: bold; color: #059669;">✓ OFFICIAL PAYMENT VERIFIED & RECORDED</div>
+                <div style="font-size: 8.5px; color: #64748b; margin-top: 2px;">Electronic Receipt Ref: <?= esc($transactionRef ?? ($receiptNumber ?? 'REC-001')) ?></div>
+            </td>
+            <?php if (!isset($showQrCode) || $showQrCode !== false): ?>
+            <td style="width: 65px; text-align: right; vertical-align: middle;">
+                <div style="display: inline-block; background: #ffffff; padding: 2px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                    <?= pdf_qr_code($qrCodeUrl ?? ('https://verify.jengo.dev/receipt/' . ($receiptNumber ?? 'REC-001')), size: 55) ?>
+                </div>
+            </td>
+            <?php endif; ?>
+        </tr>
+    </table>
+
     <table class="auth-table">
         <tr>
             <td>

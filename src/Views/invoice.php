@@ -156,13 +156,30 @@
     ?>
     <table class="totals-table">
         <tr>
-            <td style="width: 55%;">
+            <td style="width: 58%; padding-right: 15px;">
                 <div class="notes-card">
-                    <div class="notes-title">Payment Info & Notes</div>
-                    <p><?= esc($paymentNotes ?? 'Thank you for your business. Please make payments according to agreed terms.') ?></p>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="vertical-align: top; padding-right: 12px;">
+                                <div class="notes-title">Payment Info & Notes</div>
+                                <p><?= esc($paymentNotes ?? 'Thank you for your business. Please make payments according to agreed terms.') ?></p>
+                            </td>
+                            <?php if (!isset($showQrCode) || $showQrCode !== false): ?>
+                            <td style="width: 70px; vertical-align: top; text-align: center;">
+                                <?php
+                                    $qrData = $qrCodeUrl ?? ('https://verify.jengo.dev/inv/' . ($invoiceNumber ?? 'INV-001'));
+                                ?>
+                                <div style="display: inline-block; background: #ffffff; padding: 3px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                    <?= pdf_qr_code($qrData, size: 64) ?>
+                                </div>
+                                <div style="font-size: 7px; color: #94a3b8; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px;">Scan to Verify</div>
+                            </td>
+                            <?php endif; ?>
+                        </tr>
+                    </table>
                 </div>
             </td>
-            <td style="width: 45%;">
+            <td style="width: 42%;">
                 <table class="calculation-table">
                     <tr>
                         <td class="calc-label">Subtotal:</td>

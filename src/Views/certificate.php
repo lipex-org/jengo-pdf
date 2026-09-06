@@ -185,10 +185,23 @@
                 </tr>
             </table>
 
-            <div class="certificate-meta">
-                Certificate ID: <strong><?= esc($certificateId ?? 'CERT-2026-98124') ?></strong> &bull;
-                Date Issued: <strong><?= esc($issueDate ?? date('F d, Y')) ?></strong>
-            </div>
+            <table style="width: 100%; margin-top: 15px; border-collapse: collapse;">
+                <tr>
+                    <td style="text-align: left; vertical-align: middle;">
+                        <div class="certificate-meta" style="margin-top: 0;">
+                            Certificate ID: <strong><?= esc($certificateId ?? 'CERT-2026-98124') ?></strong> &bull;
+                            Date Issued: <strong><?= esc($issueDate ?? date('F d, Y')) ?></strong>
+                        </div>
+                    </td>
+                    <?php if (!isset($showQrCode) || $showQrCode !== false): ?>
+                    <td style="width: 55px; text-align: right; vertical-align: middle;">
+                        <div style="display: inline-block; background: #ffffff; padding: 2px; border-radius: 3px; border: 1px solid #e2e8f0;">
+                            <?= pdf_qr_code($qrCodeUrl ?? ('https://verify.jengo.dev/cert/' . ($certificateId ?? 'CERT-2026-98124')), size: 45) ?>
+                        </div>
+                    </td>
+                    <?php endif; ?>
+                </tr>
+            </table>
 
         </div>
     </div>

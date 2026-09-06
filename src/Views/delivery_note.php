@@ -78,6 +78,9 @@
                 <div class="doc-meta">DN #: <strong><?= esc($deliveryNumber ?? 'DN-001') ?></strong></div>
                 <div class="doc-meta">Date: <?= esc($dispatchDate ?? date($dateFormat ?? 'M d, Y')) ?></div>
                 <div class="doc-meta">PO Ref: <?= esc($poNumber ?? 'PO-001') ?></div>
+                <div style="margin-top: 4px; text-align: right;">
+                    <?= pdf_barcode($deliveryNumber ?? 'DN-001', height: 24, width: 1, showText: false) ?>
+                </div>
             </td>
         </tr>
     </table>
