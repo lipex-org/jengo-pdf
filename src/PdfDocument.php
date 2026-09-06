@@ -431,24 +431,27 @@ class PdfDocument implements PdfInterface
         .jengo-preview-canvas {
             display: flex;
             justify-content: center;
-            padding: 40px 20px 80px;
+            padding: 40px 24px 80px;
+            background-color: #0b1120;
+            min-height: calc(100vh - 60px);
             overflow-x: auto;
         }
         .jengo-sheet-frame {
             width: {$widthMm};
             min-height: {$minHeightMm};
             background: #ffffff;
-            color: #000000;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
+            color: #1e293b;
+            padding: 14mm 16mm 18mm;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
             position: relative;
             transform-origin: top center;
         }
         @media print {
             .jengo-preview-toolbar { display: none !important; }
             body { background: transparent !important; }
-            .jengo-preview-canvas { padding: 0 !important; }
-            .jengo-sheet-frame { box-shadow: none !important; width: 100% !important; margin: 0 !important; }
+            .jengo-preview-canvas { padding: 0 !important; background: transparent !important; }
+            .jengo-sheet-frame { box-shadow: none !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
         }
     </style>
 </head>
