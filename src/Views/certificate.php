@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>Certificate - <?= esc($recipientName ?? 'Recipient') ?></title>
@@ -15,64 +14,64 @@
             font-family: 'DejaVu Sans', 'Georgia', serif;
             background-color: #fcfbf7;
             color: #1e293b;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
         }
 
         .outer-border {
-            border: 6px double #d97706;
+            border: 5px double #d97706;
             border-radius: 4px;
-            padding: 25px;
+            padding: 20px;
             background: #ffffff;
-            min-height: 500px;
+            min-height: 480px;
         }
 
         .inner-border {
             border: 1px solid #fde68a;
-            padding: 25px;
+            padding: 20px;
             background: #ffffff;
         }
 
         .header-title {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
             color: #b45309;
             text-transform: uppercase;
             letter-spacing: 4px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .certificate-title {
-            font-size: 30px;
+            font-size: 28px;
             font-weight: bold;
             color: #1e1b4b;
             text-transform: uppercase;
             letter-spacing: 2px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .presented-to {
-            font-size: 12px;
+            font-size: 11px;
             color: #64748b;
             font-style: italic;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             letter-spacing: 1px;
         }
 
         .recipient-name {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: bold;
             color: #0f172a;
             text-decoration: underline;
             text-decoration-color: #f59e0b;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         .achievement-text {
-            font-size: 12px;
+            font-size: 11px;
             color: #475569;
             max-width: 650px;
-            margin: 0 auto 25px auto;
+            margin: 0 auto 20px auto;
             line-height: 1.6;
         }
 
@@ -83,18 +82,18 @@
 
         .signatures-table {
             width: 100%;
-            margin-top: 30px;
+            margin-top: 20px;
             border-collapse: collapse;
         }
 
         .signatures-table td {
             width: 33.33%;
-            vertical-align: bottom;
+            vertical-align: middle;
             text-align: center;
         }
 
         .signature-line {
-            width: 180px;
+            width: 170px;
             margin: 0 auto;
             border-top: 1px solid #64748b;
             padding-top: 6px;
@@ -111,33 +110,16 @@
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            margin-top: 2px;
         }
 
-        .seal-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .seal {
-            background-color: #fef3c7;
-            width: 70px;
-            height: 70px;
-            margin: 0 auto;
-            border: 2px solid #d97706;
-            border-radius: 50%;
-            background: radial-gradient(circle, #fef3c7 0%, #fde68a 100%);
-            display: inline-block;
-            line-height: 70px;
-            font-size: 9px;
-            font-weight: bold;
-            color: #92400e;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .seal-cell {
+            text-align: center;
+            vertical-align: middle;
         }
 
         .certificate-meta {
-            margin-top: 25px;
+            margin-top: 20px;
             font-size: 8px;
             color: #94a3b8;
             letter-spacing: 1px;
@@ -159,7 +141,7 @@
             <div class="recipient-name"><?= esc($recipientName ?? 'Recipient Name') ?></div>
 
             <div class="achievement-text">
-                <?= esc($description ?? 'For successfully completing and mastering the curriculum in') ?>
+                <?= esc($description ?? 'For successfully completing and demonstrating exceptional proficiency in') ?>
                 <br>
                 <span class="course-highlight"><?= esc($courseName ?? 'Specialized Advanced Program') ?></span>
             </div>
@@ -172,10 +154,27 @@
                             <div class="signatory-title"><?= esc($instructorTitle ?? 'Lead Instructor') ?></div>
                         </div>
                     </td>
-                    <td>
-                        <div class="seal-container">
-                            <div class="seal">★ VERIFIED ★</div>
-                        </div>
+                    <td class="seal-cell">
+                        <!-- Pure Vector Gold Medal Seal -->
+                        <svg width="86" height="86" viewBox="0 0 100 100" style="display: block; margin: 0 auto;">
+                            <!-- Ribbon Tails -->
+                            <polygon points="32,74 22,96 36,88 46,96 43,74" fill="#b45309" />
+                            <polygon points="68,74 78,96 64,88 54,96 57,74" fill="#78350f" />
+                            
+                            <!-- Outer Gold Rings -->
+                            <circle cx="50" cy="50" r="45" fill="#d97706" />
+                            <circle cx="50" cy="50" r="42" fill="#fef3c7" />
+                            <circle cx="50" cy="50" r="39" fill="#fde68a" />
+                            
+                            <!-- Concentric Detail Rings -->
+                            <circle cx="50" cy="50" r="35" fill="none" stroke="#b45309" stroke-width="1.2" stroke-dasharray="3,2" />
+                            <circle cx="50" cy="50" r="31" fill="#fef9c3" stroke="#b45309" stroke-width="0.8" />
+                            
+                            <!-- Seal Text and Stars -->
+                            <text x="50" y="38" text-anchor="middle" font-family="'DejaVu Sans', sans-serif" font-size="6.5" font-weight="bold" fill="#78350f">★ ★ ★</text>
+                            <text x="50" y="51" text-anchor="middle" font-family="'DejaVu Sans', sans-serif" font-size="8" font-weight="bold" fill="#78350f" letter-spacing="1">VERIFIED</text>
+                            <text x="50" y="62" text-anchor="middle" font-family="'DejaVu Sans', sans-serif" font-size="6.5" font-weight="bold" fill="#92400e">EXCELLENCE</text>
+                        </svg>
                     </td>
                     <td>
                         <div class="signature-line">
@@ -195,5 +194,4 @@
     </div>
 
 </body>
-
 </html>
