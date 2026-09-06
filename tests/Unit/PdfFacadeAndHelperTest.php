@@ -117,7 +117,7 @@ class PdfFacadeAndHelperTest extends TestCase
     public function testTemplateResolvesConfiguredCustomView(): void
     {
         $customConfig = new \Jengo\Pdf\Config\Pdf();
-        $customConfig->views['custom_invoice'] = 'Tests\Views\test-view';
+        $customConfig->templating['views']['custom_invoice'] = 'Tests\Views\test-view';
 
         $doc = new PdfDocument($customConfig);
         $doc->template('custom_invoice', ['title' => 'Custom Invoice Title']);

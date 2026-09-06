@@ -90,15 +90,44 @@ class PdfDocument implements PdfInterface
     }
 
     /**
-     * Render a standard document template configured in Config\Pdf::$views.
+     * Render a standard document template configured in Config\Pdf::$templating.
      */
     public function template(string $name, array $data = []): static
     {
-        if (!isset($this->config->views[$name])) {
-            throw new \InvalidArgumentException("Unknown PDF template [{$name}]. Register it in Config\\Pdf::\$views or use Pdf::view() instead.");
+        $views = array_merge(
+            is_array($this->config->views ?? null) ? $this->config->views : [],
+            is_array($this->config->templating['views'] ?? null) ? $this->config->templating['views'] : []
+        );
+        if (!isset($views[$name])) {
+            throw new \InvalidArgumentException("Unknown PDF template [{$name}]. Register it in Config\\Pdf::\$templating['views'] or use Pdf::view() instead.");
         }
 
-        return $this->view($this->config->views[$name], $data);
+        $brand = $this->config->templating['brand'] ?? [];
+        $styles = $this->config->templating['styles'] ?? [];
+        $defaults = $this->config->templating['defaults'] ?? [];
+
+        // Merge company / brand info
+        if (isset($data['company']) && is_array($data['company'])) {
+            $data['company'] = array_merge($brand, $data['company']);
+        } else {
+            $data['company'] = $brand;
+        }
+
+        // Merge styling defaults
+        $data['primaryColor'] ??= $styles['primary_color'] ?? '#0284c7';
+        $data['fontFamily'] ??= $styles['font_family'] ?? 'DejaVu Sans, Helvetica, Arial, sans-serif';
+        $data['brand'] ??= $brand;
+        $data['styles'] ??= $styles;
+
+        // Merge regional formatting defaults
+        $data['currency'] ??= $defaults['currency'] ?? '$';
+        $data['dateFormat'] ??= $defaults['date_format'] ?? 'M d, Y';
+
+        // Merge footer / disclaimer defaults
+        $data['footerText'] ??= $brand['footer_text'] ?? null;
+        $data['showPoweredBy'] ??= (bool) ($brand['show_powered_by'] ?? false);
+
+        return $this->view($views[$name], $data);
     }
 
     public function url(string $url): static

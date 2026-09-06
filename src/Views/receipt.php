@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Payment Receipt <?= esc($receiptNumber ?? 'REC-2026-001') ?></title>
+    <title>Payment Receipt <?= esc($receiptNumber ?? 'REC-001') ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'DejaVu Sans', Helvetica, Arial, sans-serif;
+            font-family: <?= esc($fontFamily ?? 'DejaVu Sans, Helvetica, Arial, sans-serif') ?>;
             font-size: 11px;
             color: #1e293b;
             background: #ffffff;
@@ -15,23 +15,23 @@
         }
         .header-table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
         .header-table td { vertical-align: top; }
-        .brand-title { font-size: 22px; font-weight: bold; color: #059669; letter-spacing: -0.5px; }
+        .brand-title { font-size: 22px; font-weight: bold; color: <?= esc($primaryColor ?? '#059669') ?>; letter-spacing: -0.5px; }
         .brand-subtitle { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
         .receipt-title { font-size: 26px; font-weight: 800; color: #064e3b; text-transform: uppercase; letter-spacing: 1px; text-align: right; }
         .receipt-meta { font-size: 10px; color: #64748b; text-align: right; margin-top: 3px; }
         .paid-stamp {
             display: inline-block;
-            border: 2px solid #059669;
-            color: #059669;
+            border: 2px solid <?= esc($primaryColor ?? '#059669') ?>;
+            color: <?= esc($primaryColor ?? '#059669') ?>;
             font-weight: 900;
-            font-size: 12px;
+            font-size: 11px;
             letter-spacing: 2px;
             padding: 4px 12px;
             border-radius: 4px;
             text-transform: uppercase;
             margin-top: 6px;
         }
-        .divider { height: 2px; background-color: #059669; margin-bottom: 20px; }
+        .divider { height: 2px; background-color: <?= esc($primaryColor ?? '#059669') ?>; margin-bottom: 20px; }
         .callout-amount {
             background: #ecfdf5;
             border: 1px solid #a7f3d0;
@@ -61,7 +61,7 @@
         .meta-val { color: #0f172a; font-weight: 600; text-align: right; }
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .items-table th {
-            background-color: #059669;
+            background-color: <?= esc($primaryColor ?? '#059669') ?>;
             color: #ffffff;
             font-size: 9px;
             font-weight: bold;
@@ -76,7 +76,7 @@
         .auth-table { width: 100%; margin-top: 30px; border-collapse: collapse; }
         .auth-table td { width: 50%; vertical-align: bottom; }
         .sign-line { width: 180px; border-top: 1px solid #64748b; padding-top: 4px; font-size: 9px; color: #475569; margin-top: 35px; }
-        .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8px; color: #94a3b8; }
+        .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8.5px; color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -84,13 +84,18 @@
     <table class="header-table">
         <tr>
             <td>
+                <?php if (!empty($company['logo'])): ?>
+                    <div style="margin-bottom: 6px;"><img src="<?= esc($company['logo']) ?>" alt="Logo" style="max-height: 45px;"></div>
+                <?php endif; ?>
                 <div class="brand-title"><?= esc($company['name'] ?? 'Company / Organization') ?></div>
-                <div class="brand-subtitle"><?= esc($company['tagline'] ?? 'Official Payment Receipt & Confirmation') ?></div>
+                <?php if (!empty($company['tagline'])): ?>
+                    <div class="brand-subtitle"><?= esc($company['tagline']) ?></div>
+                <?php endif; ?>
             </td>
             <td>
                 <div class="receipt-title">RECEIPT</div>
-                <div class="receipt-meta">Receipt #: <strong><?= esc($receiptNumber ?? 'REC-2026-9041') ?></strong></div>
-                <div class="receipt-meta">Date: <?= esc($receiptDate ?? date('M d, Y H:i')) ?></div>
+                <div class="receipt-meta">Receipt #: <strong><?= esc($receiptNumber ?? 'REC-001') ?></strong></div>
+                <div class="receipt-meta">Date: <?= esc($receiptDate ?? date(($dateFormat ?? 'M d, Y') . ' H:i')) ?></div>
                 <div style="text-align: right;">
                     <div class="paid-stamp">✔ OFFICIAL RECEIPT</div>
                 </div>
@@ -133,11 +138,11 @@
                 <td class="meta-key">Payment Method:</td>
                 <td class="meta-val"><?= esc($paymentMethod ?? 'Credit Card / M-Pesa / Bank Wire') ?></td>
                 <td class="meta-key" style="text-align: right;">Transaction Ref:</td>
-                <td class="meta-val"><?= esc($transactionRef ?? 'TXN-984128540') ?></td>
+                <td class="meta-val"><?= esc($transactionRef ?? 'TXN-001') ?></td>
             </tr>
             <tr>
                 <td class="meta-key">Invoice / Order Ref:</td>
-                <td class="meta-val"><?= esc($invoiceRef ?? 'INV-2026-089') ?></td>
+                <td class="meta-val"><?= esc($invoiceRef ?? 'INV-001') ?></td>
                 <td class="meta-key" style="text-align: right;">Outstanding Balance:</td>
                 <td class="meta-val" style="color: #059669;"><?= esc($currency ?? '$') ?><?= number_format((float) ($balanceRemaining ?? 0.0), 2) ?></td>
             </tr>
@@ -178,7 +183,14 @@
     </table>
 
     <div class="footer">
-        Generated electronically via Jengo PDF Engine &bull; Valid without physical stamp if verified
+        <?php if (!empty($footerText)): ?>
+            <div><?= esc($footerText) ?></div>
+        <?php else: ?>
+            <div>Generated electronically via Jengo PDF Engine &bull; Valid without physical stamp if verified</div>
+        <?php endif; ?>
+        <?php if (!empty($showPoweredBy)): ?>
+            <div style="margin-top: 3px; font-size: 7.5px; color: #cbd5e1;">Generated by Jengo PDF Engine</div>
+        <?php endif; ?>
     </div>
 
 </body>

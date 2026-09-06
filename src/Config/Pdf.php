@@ -63,21 +63,62 @@ class Pdf extends BaseConfig
     ];
 
     /**
-     * Standard View Templates Mapping.
-     * Maps template aliases to namespaced view paths.
-     * Developers can override any view here by specifying their own custom view path.
+     * Document Templating & Branding Configuration.
      *
-     * @var array<string, string>
+     * @var array{
+     *     brand?: array<string, mixed>,
+     *     views?: array<string, string>,
+     *     styles?: array<string, string>,
+     *     defaults?: array<string, string>
+     * }
      */
-    public array $views = [
-        'invoice'        => 'Jengo\Pdf\Views\invoice',
-        'quotation'      => 'Jengo\Pdf\Views\quotation',
-        'receipt'        => 'Jengo\Pdf\Views\receipt',
-        'delivery_note'  => 'Jengo\Pdf\Views\delivery_note',
-        'payslip'        => 'Jengo\Pdf\Views\payslip',
-        'purchase_order' => 'Jengo\Pdf\Views\purchase_order',
-        'certificate'    => 'Jengo\Pdf\Views\certificate',
-        'report'         => 'Jengo\Pdf\Views\report',
+    public array $templating = [
+        /**
+         * Company & Brand Details (supplied to templates automatically)
+         */
+        'brand' => [
+            'name'            => 'Jengo Cloud Solutions Ltd',
+            'tagline'         => 'Next-Generation Web & Cloud Architecture',
+            'logo'            => null,
+            'address'         => '120 Silicon Boulevard, Tower A',
+            'city_state'      => 'Nairobi, Kenya 00100',
+            'email'           => 'support@jengo.dev',
+            'phone'           => '+254 700 000 000',
+            'tax_id'          => 'P051239845X',
+            'footer_text'     => 'Generated electronically • Valid without physical signature.',
+            'show_powered_by' => false,
+        ],
+
+        /**
+         * Standard Template Views Mapping
+         * Override any view here by pointing to your custom view path.
+         */
+        'views' => [
+            'invoice'        => 'Jengo\Pdf\Views\invoice',
+            'quotation'      => 'Jengo\Pdf\Views\quotation',
+            'receipt'        => 'Jengo\Pdf\Views\receipt',
+            'delivery_note'  => 'Jengo\Pdf\Views\delivery_note',
+            'payslip'        => 'Jengo\Pdf\Views\payslip',
+            'purchase_order' => 'Jengo\Pdf\Views\purchase_order',
+            'certificate'    => 'Jengo\Pdf\Views\certificate',
+            'report'         => 'Jengo\Pdf\Views\report',
+        ],
+
+        /**
+         * Global Styling & Accents
+         */
+        'styles' => [
+            'primary_color' => '#0284c7',
+            'font_family'   => 'DejaVu Sans, Helvetica, Arial, sans-serif',
+        ],
+
+        /**
+         * Regional & Formatting Defaults
+         */
+        'defaults' => [
+            'currency'    => '$',
+            'date_format' => 'M d, Y',
+        ],
     ];
 
     /**

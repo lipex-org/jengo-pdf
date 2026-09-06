@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Quotation <?= esc($quoteNumber ?? 'QUO-2026-001') ?></title>
+    <title>Quotation <?= esc($quoteNumber ?? 'QUO-001') ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'DejaVu Sans', Helvetica, Arial, sans-serif;
+            font-family: <?= esc($fontFamily ?? 'DejaVu Sans, Helvetica, Arial, sans-serif') ?>;
             font-size: 11px;
             color: #1e293b;
             background: #ffffff;
@@ -15,14 +15,14 @@
         }
         .header-table { width: 100%; margin-bottom: 25px; border-collapse: collapse; }
         .header-table td { vertical-align: top; }
-        .brand-title { font-size: 22px; font-weight: bold; color: #4f46e5; letter-spacing: -0.5px; }
+        .brand-title { font-size: 22px; font-weight: bold; color: <?= esc($primaryColor ?? '#4f46e5') ?>; letter-spacing: -0.5px; }
         .brand-subtitle { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
         .quote-title { font-size: 26px; font-weight: 800; color: #1e1b4b; text-transform: uppercase; letter-spacing: 1px; text-align: right; }
         .quote-meta { font-size: 10px; color: #64748b; text-align: right; margin-top: 3px; }
         .validity-badge {
             display: inline-block;
             background-color: #eef2ff;
-            color: #4f46e5;
+            color: <?= esc($primaryColor ?? '#4f46e5') ?>;
             font-weight: bold;
             font-size: 9px;
             padding: 3px 8px;
@@ -31,18 +31,18 @@
             text-transform: uppercase;
             margin-top: 6px;
         }
-        .divider { height: 2px; background-color: #4f46e5; margin-bottom: 20px; }
+        .divider { height: 2px; background-color: <?= esc($primaryColor ?? '#4f46e5') ?>; margin-bottom: 20px; }
         .info-table { width: 100%; margin-bottom: 25px; border-collapse: collapse; }
         .info-table td { width: 50%; vertical-align: top; }
         .section-label { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
         .entity-name { font-size: 13px; font-weight: bold; color: #0f172a; margin-bottom: 3px; }
         .entity-detail { font-size: 10px; color: #475569; line-height: 1.4; }
-        .project-scope { background: #f8fafc; border-left: 4px solid #4f46e5; padding: 12px 16px; margin-bottom: 20px; border-radius: 0 6px 6px 0; }
+        .project-scope { background: #f8fafc; border-left: 4px solid <?= esc($primaryColor ?? '#4f46e5') ?>; padding: 12px 16px; margin-bottom: 20px; border-radius: 0 6px 6px 0; }
         .project-title { font-size: 12px; font-weight: bold; color: #1e1b4b; }
         .project-desc { font-size: 10px; color: #475569; margin-top: 3px; }
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .items-table th {
-            background-color: #4f46e5;
+            background-color: <?= esc($primaryColor ?? '#4f46e5') ?>;
             color: #ffffff;
             font-size: 9px;
             font-weight: bold;
@@ -65,14 +65,14 @@
         .calculation-table td { padding: 5px 8px; font-size: 10px; }
         .calc-label { color: #64748b; text-align: right; }
         .calc-value { text-align: right; font-weight: 600; color: #0f172a; width: 90px; }
-        .calc-grand-total { border-top: 2px solid #4f46e5; padding-top: 8px !important; }
-        .grand-total-label { font-size: 12px !important; font-weight: bold !important; color: #4f46e5 !important; }
-        .grand-total-value { font-size: 14px !important; font-weight: 800 !important; color: #4f46e5 !important; }
+        .calc-grand-total { border-top: 2px solid <?= esc($primaryColor ?? '#4f46e5') ?>; padding-top: 8px !important; }
+        .grand-total-label { font-size: 12px !important; font-weight: bold !important; color: <?= esc($primaryColor ?? '#4f46e5') ?> !important; }
+        .grand-total-value { font-size: 14px !important; font-weight: 800 !important; color: <?= esc($primaryColor ?? '#4f46e5') ?> !important; }
         .acceptance-box { width: 100%; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 15px; margin-top: 20px; }
         .sign-table { width: 100%; border-collapse: collapse; }
         .sign-table td { width: 50%; vertical-align: bottom; }
         .sign-line { width: 180px; border-top: 1px solid #64748b; padding-top: 4px; font-size: 9px; color: #475569; margin-top: 35px; }
-        .footer { margin-top: 25px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8px; color: #94a3b8; }
+        .footer { margin-top: 25px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8.5px; color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -80,14 +80,19 @@
     <table class="header-table">
         <tr>
             <td>
-                <div class="brand-title"><?= esc($company['name'] ?? 'Agency / Company Name') ?></div>
-                <div class="brand-subtitle"><?= esc($company['tagline'] ?? 'Consulting & Engineering Proposal') ?></div>
+                <?php if (!empty($company['logo'])): ?>
+                    <div style="margin-bottom: 6px;"><img src="<?= esc($company['logo']) ?>" alt="Logo" style="max-height: 45px;"></div>
+                <?php endif; ?>
+                <div class="brand-title"><?= esc($company['name'] ?? 'Provider Name') ?></div>
+                <?php if (!empty($company['tagline'])): ?>
+                    <div class="brand-subtitle"><?= esc($company['tagline']) ?></div>
+                <?php endif; ?>
             </td>
             <td>
                 <div class="quote-title">QUOTATION</div>
-                <div class="quote-meta">#<?= esc($quoteNumber ?? 'QUO-2026-042') ?></div>
-                <div class="quote-meta">Date: <?= esc($quoteDate ?? date('M d, Y')) ?></div>
-                <div class="quote-meta">Valid Until: <?= esc($validUntil ?? date('M d, Y', strtotime('+30 days'))) ?></div>
+                <div class="quote-meta">#<?= esc($quoteNumber ?? 'QUO-001') ?></div>
+                <div class="quote-meta">Date: <?= esc($quoteDate ?? date($dateFormat ?? 'M d, Y')) ?></div>
+                <div class="quote-meta">Valid Until: <?= esc($validUntil ?? date($dateFormat ?? 'M d, Y', strtotime('+30 days'))) ?></div>
                 <div style="text-align: right;">
                     <span class="validity-badge">Valid for 30 Days</span>
                 </div>
@@ -212,7 +217,14 @@
     </div>
 
     <div class="footer">
-        Generated by Jengo PDF Engine &bull; Proposal Confidential
+        <?php if (!empty($footerText)): ?>
+            <div><?= esc($footerText) ?></div>
+        <?php else: ?>
+            <div><?= esc($company['name'] ?? 'Company') ?> &bull; Proposal Confidential</div>
+        <?php endif; ?>
+        <?php if (!empty($showPoweredBy)): ?>
+            <div style="margin-top: 3px; font-size: 7.5px; color: #cbd5e1;">Generated by Jengo PDF Engine</div>
+        <?php endif; ?>
     </div>
 
 </body>

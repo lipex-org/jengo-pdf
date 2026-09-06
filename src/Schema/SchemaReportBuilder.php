@@ -100,16 +100,24 @@ class SchemaReportBuilder implements SchemaReportInterface
         $cols = $this->resolveColumns($rows);
         $computedAggregates = $this->computeAggregates($rows, $cols);
 
+        $config = config('Pdf') ?? new \Jengo\Pdf\Config\Pdf();
+        $templating = $config->templating ?? [];
+        $brand = $templating['brand'] ?? [];
+        $defaults = $templating['defaults'] ?? [];
         $theme = ReportTheme::make($this->theme);
 
         $data = [
-            'title'      => $this->title,
-            'subtitle'   => $this->subtitle,
-            'columns'    => $cols,
-            'rows'       => $rows,
-            'aggregates' => $computedAggregates,
-            'theme'      => $theme,
-            'themeColor' => $theme->primary,
+            'title'         => $this->title,
+            'subtitle'      => $this->subtitle,
+            'columns'       => $cols,
+            'rows'          => $rows,
+            'aggregates'    => $computedAggregates,
+            'theme'         => $theme,
+            'themeColor'    => $theme->primary,
+            'brand'         => $brand,
+            'footerText'    => $brand['footer_text'] ?? null,
+            'showPoweredBy' => $brand['show_powered_by'] ?? true,
+            'dateFormat'    => $defaults['date_format'] ?? 'Y-m-d H:i:s',
         ];
 
         $html = $this->renderHtml($data);
@@ -267,7 +275,7 @@ class SchemaReportBuilder implements SchemaReportInterface
         }
 
         $config = config('Pdf') ?? new \Jengo\Pdf\Config\Pdf();
-        $reportView = $config->views['report'] ?? 'Jengo\Pdf\Views\report';
+        $reportView = $config->templating['views']['report'] ?? $config->views['report'] ?? 'Jengo\Pdf\Views\report';
 
         return view($reportView, $data);
     }

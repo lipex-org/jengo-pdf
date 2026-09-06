@@ -6,7 +6,7 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: 'DejaVu Sans', Helvetica, Arial, sans-serif;
+            font-family: <?= esc($fontFamily ?? 'DejaVu Sans, Helvetica, Arial, sans-serif') ?>;
             font-size: 11px;
             color: #1e293b;
             background: #ffffff;
@@ -15,7 +15,7 @@
         }
         .header-table { width: 100%; margin-bottom: 25px; border-collapse: collapse; }
         .header-table td { vertical-align: top; }
-        .brand-title { font-size: 22px; font-weight: bold; color: #0284c7; letter-spacing: -0.5px; }
+        .brand-title { font-size: 22px; font-weight: bold; color: <?= esc($primaryColor ?? '#0284c7') ?>; letter-spacing: -0.5px; }
         .brand-subtitle { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
         .invoice-title { font-size: 26px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 1px; text-align: right; }
         .invoice-meta { font-size: 10px; color: #64748b; text-align: right; margin-top: 3px; }
@@ -31,7 +31,7 @@
             text-transform: uppercase;
             margin-top: 6px;
         }
-        .divider { height: 2px; background-color: #0284c7; margin-bottom: 20px; }
+        .divider { height: 2px; background-color: <?= esc($primaryColor ?? '#0284c7') ?>; margin-bottom: 20px; }
         .info-table { width: 100%; margin-bottom: 25px; border-collapse: collapse; }
         .info-table td { width: 50%; vertical-align: top; }
         .section-label { font-size: 9px; font-weight: bold; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
@@ -39,7 +39,7 @@
         .entity-detail { font-size: 10px; color: #475569; line-height: 1.4; }
         .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .items-table th {
-            background-color: #0284c7;
+            background-color: <?= esc($primaryColor ?? '#0284c7') ?>;
             color: #ffffff;
             font-size: 9px;
             font-weight: bold;
@@ -62,10 +62,10 @@
         .calculation-table td { padding: 5px 8px; font-size: 10px; }
         .calc-label { color: #64748b; text-align: right; }
         .calc-value { text-align: right; font-weight: 600; color: #0f172a; width: 90px; }
-        .calc-grand-total { border-top: 2px solid #0284c7; padding-top: 8px !important; }
-        .grand-total-label { font-size: 12px !important; font-weight: bold !important; color: #0284c7 !important; }
-        .grand-total-value { font-size: 14px !important; font-weight: 800 !important; color: #0284c7 !important; }
-        .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8px; color: #94a3b8; }
+        .calc-grand-total { border-top: 2px solid <?= esc($primaryColor ?? '#0284c7') ?>; padding-top: 8px !important; }
+        .grand-total-label { font-size: 12px !important; font-weight: bold !important; color: <?= esc($primaryColor ?? '#0284c7') ?> !important; }
+        .grand-total-value { font-size: 14px !important; font-weight: 800 !important; color: <?= esc($primaryColor ?? '#0284c7') ?> !important; }
+        .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 8.5px; color: #94a3b8; }
     </style>
 </head>
 <body>
@@ -73,14 +73,19 @@
     <table class="header-table">
         <tr>
             <td>
+                <?php if (!empty($company['logo'])): ?>
+                    <div style="margin-bottom: 6px;"><img src="<?= esc($company['logo']) ?>" alt="Logo" style="max-height: 45px;"></div>
+                <?php endif; ?>
                 <div class="brand-title"><?= esc($company['name'] ?? 'Company Name') ?></div>
-                <div class="brand-subtitle"><?= esc($company['tagline'] ?? 'Business & Technology Solutions') ?></div>
+                <?php if (!empty($company['tagline'])): ?>
+                    <div class="brand-subtitle"><?= esc($company['tagline']) ?></div>
+                <?php endif; ?>
             </td>
             <td>
                 <div class="invoice-title">INVOICE</div>
                 <div class="invoice-meta">#<?= esc($invoiceNumber ?? 'INV-001') ?></div>
-                <div class="invoice-meta">Date: <?= esc($invoiceDate ?? date('M d, Y')) ?></div>
-                <div class="invoice-meta">Due: <?= esc($dueDate ?? date('M d, Y', strtotime('+14 days'))) ?></div>
+                <div class="invoice-meta">Date: <?= esc($invoiceDate ?? date($dateFormat ?? 'M d, Y')) ?></div>
+                <div class="invoice-meta">Due: <?= esc($dueDate ?? date($dateFormat ?? 'M d, Y', strtotime('+14 days'))) ?></div>
                 <div style="text-align: right;">
                     <span class="status-badge"><?= esc($status ?? 'PAID') ?></span>
                 </div>
@@ -185,7 +190,14 @@
     </table>
 
     <div class="footer">
-        Generated by Jengo PDF Engine &bull; All Rights Reserved.
+        <?php if (!empty($footerText)): ?>
+            <div><?= esc($footerText) ?></div>
+        <?php else: ?>
+            <div><?= esc($company['name'] ?? 'Company') ?> &bull; All Rights Reserved.</div>
+        <?php endif; ?>
+        <?php if (!empty($showPoweredBy)): ?>
+            <div style="margin-top: 3px; font-size: 7.5px; color: #cbd5e1;">Generated by Jengo PDF Engine</div>
+        <?php endif; ?>
     </div>
 
 </body>
