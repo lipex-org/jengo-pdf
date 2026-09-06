@@ -225,4 +225,46 @@ class SchemaReportBuilderTest extends TestCase
         $this->assertStringContainsString('color:#059669', $formatted);
         $this->assertStringContainsString('Paid', $formatted);
     }
+
+    public function testReportThemeCustomization(): void
+    {
+        $theme = \Jengo\Pdf\Schema\ReportTheme::make()
+            ->primary('#8b5cf6')
+            ->secondary('#7c3aed')
+            ->headerText('#ffffff')
+            ->zebra('#f5f3ff')
+            ->border('#ddd6fe')
+            ->font('DejaVu Sans')
+            ->footerText('#a78bfa')
+            ->customCss('.title { text-transform: uppercase; }');
+
+        $this->assertSame('#8b5cf6', $theme->primary);
+        $this->assertSame('#7c3aed', $theme->secondary);
+        $this->assertSame('#f5f3ff', $theme->zebra);
+        $this->assertStringContainsString('.title', $theme->customCss);
+
+        // Test SchemaReportBuilder with custom theme
+        $report = new SchemaReportBuilder([['id' => 1, 'name' => 'Custom Theme Record']]);
+        $pdfBinary = $report->theme($theme)->output();
+        $this->assertNotEmpty($pdfBinary);
+        $this->assertStringStartsWith('%PDF', $pdfBinary);
+    }
+
+    public function testReportThemeGlobalRegistration(): void
+    {
+        \Jengo\Pdf\Pdf::registerTheme('cyberpunk', [
+            'primary'   => '#f43f5e',
+            'secondary' => '#e11d48',
+            'zebra'     => '#fff1f2',
+            'border'    => '#fda4af',
+        ]);
+
+        $theme = \Jengo\Pdf\Schema\ReportTheme::make('cyberpunk');
+        $this->assertSame('#f43f5e', $theme->primary);
+        $this->assertSame('#e11d48', $theme->secondary);
+
+        $report = new SchemaReportBuilder([['id' => 10, 'name' => 'Cyberpunk']]);
+        $pdfBinary = $report->theme('cyberpunk')->output();
+        $this->assertNotEmpty($pdfBinary);
+    }
 }

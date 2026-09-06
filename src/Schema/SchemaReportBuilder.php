@@ -18,7 +18,7 @@ class SchemaReportBuilder implements SchemaReportInterface
     protected ?string $subtitle = null;
     protected array $columns = [];
     protected array $aggregates = [];
-    protected string $theme = 'modern-blue';
+    protected ReportTheme|string|array $theme = 'modern-blue';
     protected ?string $customTemplate = null;
     protected ?string $filename = null;
 
@@ -54,7 +54,7 @@ class SchemaReportBuilder implements SchemaReportInterface
         return $this;
     }
 
-    public function theme(string $theme): static
+    public function theme(ReportTheme|string|array $theme): static
     {
         $this->theme = $theme;
         return $this;
@@ -100,15 +100,7 @@ class SchemaReportBuilder implements SchemaReportInterface
         $cols = $this->resolveColumns($rows);
         $computedAggregates = $this->computeAggregates($rows, $cols);
 
-        $themeColors = [
-            'modern-blue'  => '#3182ce',
-            'emerald'      => '#059669',
-            'crimson'      => '#e11d48',
-            'slate'        => '#475569',
-            'minimal-dark' => '#0f172a',
-            'dark'         => '#1e293b',
-        ];
-        $themeColor = $themeColors[$this->theme] ?? '#3182ce';
+        $theme = ReportTheme::make($this->theme);
 
         $data = [
             'title'      => $this->title,
@@ -116,7 +108,8 @@ class SchemaReportBuilder implements SchemaReportInterface
             'columns'    => $cols,
             'rows'       => $rows,
             'aggregates' => $computedAggregates,
-            'themeColor' => $themeColor,
+            'theme'      => $theme,
+            'themeColor' => $theme->primary,
         ];
 
         $html = $this->renderHtml($data);

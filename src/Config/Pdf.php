@@ -61,4 +61,75 @@ class Pdf extends BaseConfig
         'tempDirectory'  => null,
         'timeout'        => 30,
     ];
+
+    /**
+     * Schema Report Themes.
+     *
+     * @var array<string, array<string, string>>
+     */
+    public array $themes = [
+        'modern-blue' => [
+            'primary'    => '#3182ce',
+            'secondary'  => '#2b6cb0',
+            'headerText' => '#ffffff',
+            'zebra'      => '#f7fafc',
+            'border'     => '#e2e8f0',
+            'font'       => 'DejaVu Sans, Helvetica, Arial, sans-serif',
+            'footerText' => '#a0aec0',
+        ],
+        'emerald' => [
+            'primary'    => '#059669',
+            'secondary'  => '#047857',
+            'headerText' => '#ffffff',
+            'zebra'      => '#f0fdf4',
+            'border'     => '#d1fae5',
+            'font'       => 'DejaVu Sans, Helvetica, Arial, sans-serif',
+            'footerText' => '#6ee7b7',
+        ],
+        'crimson' => [
+            'primary'    => '#e11d48',
+            'secondary'  => '#be123c',
+            'headerText' => '#ffffff',
+            'zebra'      => '#fff1f2',
+            'border'     => '#fecdd3',
+            'font'       => 'DejaVu Sans, Helvetica, Arial, sans-serif',
+            'footerText' => '#fda4af',
+        ],
+        'amber' => [
+            'primary'    => '#d97706',
+            'secondary'  => '#b45309',
+            'headerText' => '#ffffff',
+            'zebra'      => '#fffbeb',
+            'border'     => '#fde68a',
+            'font'       => 'DejaVu Sans, Helvetica, Arial, sans-serif',
+            'footerText' => '#fcd34d',
+        ],
+        'indigo' => [
+            'primary'    => '#6366f1',
+            'secondary'  => '#4f46e5',
+            'headerText' => '#ffffff',
+            'zebra'      => '#eef2ff',
+            'border'     => '#c7d2fe',
+            'font'       => 'DejaVu Sans, Helvetica, Arial, sans-serif',
+            'footerText' => '#a5b4fc',
+        ],
+        'slate' => [
+            'primary'    => '#475569',
+            'secondary'  => '#334155',
+            'headerText' => '#ffffff',
+            'zebra'      => '#f8fafc',
+            'border'     => '#e2e8f0',
+            'font'       => 'DejaVu Sans, Helvetica, Arial, sans-serif',
+            'footerText' => '#94a3b8',
+        ],
+        'minimal-dark' => [
+            'primary'    => '#0f172a',
+            'secondary'  => '#1e293b',
+            'headerText' => '#ffffff',
+            'zebra'      => '#f1f5f9',
+            'border'     => '#cbd5e1',
+            'font'       => 'DejaVu Sans, Helvetica, Arial, sans-serif',
+            'footerText' => '#64748b',
+        ],
+    ];
 }

@@ -6,6 +6,8 @@ namespace Jengo\Pdf\Contracts;
 
 use CodeIgniter\HTTP\ResponseInterface;
 
+use Jengo\Pdf\Schema\ReportTheme;
+
 interface SchemaReportInterface
 {
     public function title(string $title): static;
@@ -16,7 +18,7 @@ interface SchemaReportInterface
 
     public function aggregate(array $aggregates): static;
 
-    public function theme(string $theme): static;
+    public function theme(ReportTheme|string|array $theme): static;
 
     public function template(string $viewPath): static;
 

@@ -34,6 +34,22 @@ class PdfFacadeAndHelperTest extends TestCase
 
         $newDoc = Pdf::newDocument();
         $this->assertInstanceOf(PdfDocument::class, $newDoc);
+
+        // Test Built-in Templates
+        $templates = ['invoice', 'quotation', 'receipt', 'delivery_note', 'payslip', 'purchase_order', 'certificate'];
+        foreach ($templates as $tpl) {
+            $tplDoc = Pdf::template($tpl, ['company' => ['name' => 'Test Corp']]);
+            $this->assertInstanceOf(PdfInterface::class, $tplDoc);
+            $output = $tplDoc->output();
+            $this->assertNotEmpty($output);
+            $this->assertStringStartsWith('%PDF', $output);
+        }
+    }
+
+    public function testTemplateThrowsExceptionForUnknownTemplate(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        Pdf::template('non_existent_template_12345');
     }
 
     public function testPdfHelperFunction(): void
@@ -95,6 +111,17 @@ class PdfFacadeAndHelperTest extends TestCase
             file_put_contents($targetFile, $backup);
         } else {
             @unlink($targetFile);
+        }
+
+        $viewsDestDir = APPPATH . 'Views/pdf';
+        if (is_dir($viewsDestDir)) {
+            $files = glob($viewsDestDir . '/*');
+            foreach ($files as $f) {
+                if (is_file($f)) {
+                    @unlink($f);
+                }
+            }
+            @rmdir($viewsDestDir);
         }
     }
 }

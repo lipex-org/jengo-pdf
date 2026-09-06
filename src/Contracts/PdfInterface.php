@@ -18,6 +18,8 @@ interface PdfInterface
 
     public function view(string $view, array $data = []): static;
 
+    public function template(string $name, array $data = []): static;
+
     public function url(string $url): static;
 
     public function format(PaperFormat|string $format): static;

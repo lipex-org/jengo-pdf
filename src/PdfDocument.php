@@ -89,6 +89,35 @@ class PdfDocument implements PdfInterface
         return $this;
     }
 
+    /**
+     * Render a built-in standard document template or an app override.
+     */
+    public function template(string $name, array $data = []): static
+    {
+        // 1. Check if app has overridden view in app/Views/pdf/{name}.php
+        if (defined('APPPATH') && is_file(APPPATH . 'Views/pdf/' . $name . '.php')) {
+            return $this->view('pdf/' . $name, $data);
+        }
+
+        // 2. Check if app has view in app/Views/{name}.php
+        if (defined('APPPATH') && is_file(APPPATH . 'Views/' . $name . '.php')) {
+            return $this->view($name, $data);
+        }
+
+        // 3. Use package built-in template
+        $builtInPath = __DIR__ . '/Templates/' . $name . '.php';
+        if (!is_file($builtInPath)) {
+            throw new \InvalidArgumentException("Built-in PDF template [{$name}] not found at {$builtInPath}.");
+        }
+
+        extract($data);
+        ob_start();
+        include $builtInPath;
+        $html = (string) ob_get_clean();
+
+        return $this->html($html);
+    }
+
     public function url(string $url): static
     {
         $this->url = $url;
