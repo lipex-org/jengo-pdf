@@ -63,6 +63,24 @@ class Pdf extends BaseConfig
     ];
 
     /**
+     * Standard View Templates Mapping.
+     * Maps template aliases to namespaced view paths.
+     * Developers can override any view here by specifying their own custom view path.
+     *
+     * @var array<string, string>
+     */
+    public array $views = [
+        'invoice'        => 'Jengo\Pdf\Views\invoice',
+        'quotation'      => 'Jengo\Pdf\Views\quotation',
+        'receipt'        => 'Jengo\Pdf\Views\receipt',
+        'delivery_note'  => 'Jengo\Pdf\Views\delivery_note',
+        'payslip'        => 'Jengo\Pdf\Views\payslip',
+        'purchase_order' => 'Jengo\Pdf\Views\purchase_order',
+        'certificate'    => 'Jengo\Pdf\Views\certificate',
+        'report'         => 'Jengo\Pdf\Views\report',
+    ];
+
+    /**
      * Schema Report Themes.
      *
      * @var array<string, array<string, string>>

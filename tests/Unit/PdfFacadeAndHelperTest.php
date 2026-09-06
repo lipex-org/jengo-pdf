@@ -112,16 +112,15 @@ class PdfFacadeAndHelperTest extends TestCase
         } else {
             @unlink($targetFile);
         }
+    }
 
-        $viewsDestDir = APPPATH . 'Views/pdf';
-        if (is_dir($viewsDestDir)) {
-            $files = glob($viewsDestDir . '/*');
-            foreach ($files as $f) {
-                if (is_file($f)) {
-                    @unlink($f);
-                }
-            }
-            @rmdir($viewsDestDir);
-        }
+    public function testTemplateResolvesConfiguredCustomView(): void
+    {
+        $customConfig = new \Jengo\Pdf\Config\Pdf();
+        $customConfig->views['custom_invoice'] = 'Tests\Views\test-view';
+
+        $doc = new PdfDocument($customConfig);
+        $doc->template('custom_invoice', ['title' => 'Custom Invoice Title']);
+        $this->assertSame('Tests\Views\test-view', $doc->getView());
     }
 }

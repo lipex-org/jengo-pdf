@@ -46,23 +46,5 @@ class PdfInstaller extends AbstractInstaller
 
         $this->writeFile($dest, $content);
         CLI::write('Published Config/Pdf.php successfully.', 'green');
-
-        // Publish starter templates
-        $templatesDir = __DIR__ . '/../Templates';
-        $viewsDestDir = APPPATH . 'Views/pdf';
-        if (is_dir($templatesDir)) {
-            if (!is_dir($viewsDestDir)) {
-                mkdir($viewsDestDir, 0777, true);
-            }
-            $files = glob($templatesDir . '/*.php');
-            foreach ($files as $file) {
-                $basename = basename($file);
-                $target = $viewsDestDir . '/' . $basename;
-                if (!file_exists($target)) {
-                    $this->writeFile($target, file_get_contents($file));
-                }
-            }
-            CLI::write('Published starter PDF templates to app/Views/pdf/.', 'green');
-        }
     }
 }

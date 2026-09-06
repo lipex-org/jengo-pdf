@@ -266,10 +266,9 @@ class SchemaReportBuilder implements SchemaReportInterface
             return view($this->customTemplate, $data);
         }
 
-        // Render built-in template
-        extract($data);
-        ob_start();
-        include __DIR__ . '/Templates/report-template.php';
-        return (string) ob_get_clean();
+        $config = config('Pdf') ?? new \Jengo\Pdf\Config\Pdf();
+        $reportView = $config->views['report'] ?? 'Jengo\Pdf\Views\report';
+
+        return view($reportView, $data);
     }
 }
