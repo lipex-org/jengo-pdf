@@ -212,4 +212,17 @@ class SchemaReportBuilderTest extends TestCase
         $numCol = Column::make('amount', ['format' => 'number']);
         $this->assertSame('100', $numCol->formatValue(100.4));
     }
+
+    public function testColumnBadgeFormatting(): void
+    {
+        $badgeCol = Column::make('status', 'Status')->badge([
+            'paid'    => 'success',
+            'pending' => 'warning',
+        ]);
+
+        $formatted = $badgeCol->formatValue('paid');
+        $this->assertStringContainsString('background-color:#ecfdf5', $formatted);
+        $this->assertStringContainsString('color:#059669', $formatted);
+        $this->assertStringContainsString('Paid', $formatted);
+    }
 }

@@ -120,7 +120,7 @@
                     <tr>
                         <?php foreach ($columns as $col): ?>
                             <td class="text-<?= esc($col->align) ?>">
-                                <?= esc($col->formatValue($row[$col->key] ?? null, $row)) ?>
+                                <?= $col->formatValue($row[$col->key] ?? null, $row) ?>
                             </td>
                         <?php endforeach; ?>
                     </tr>
@@ -133,7 +133,7 @@
                     <?php foreach ($columns as $index => $col): ?>
                         <td class="text-<?= esc($col->align) ?>">
                             <?php if (isset($aggregates[$col->key])): ?>
-                                <?= esc($aggregates[$col->key]['label'] ?? '') ?> <?= esc($col->formatValue($aggregates[$col->key]['value'] ?? null)) ?>
+                                <?= esc($aggregates[$col->key]['label'] ?? '') ?> <?= $col->formatValue($aggregates[$col->key]['value'] ?? null) ?>
                             <?php elseif ($index === 0): ?>
                                 Total Summary
                             <?php endif; ?>
