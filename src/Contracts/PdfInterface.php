@@ -52,6 +52,12 @@ interface PdfInterface
 
     public function base64(): string;
 
+    public function dataUri(): string;
+
+    public function toHtml(): string;
+
+    public function preview(bool $withToolbar = true): ResponseInterface;
+
     public function save(string $destinationPath): string;
 
     public function filename(string $name): static;
@@ -59,4 +65,8 @@ interface PdfInterface
     public function inline(?string $filename = null): ResponseInterface;
 
     public function download(?string $filename = null): ResponseInterface;
+
+    public function attachTo(mixed $email, ?string $filename = null, string $disposition = 'attachment'): static;
+
+    public function store(string $path, ?string $disk = null): string;
 }

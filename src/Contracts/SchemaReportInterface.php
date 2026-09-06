@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Jengo\Pdf\Contracts;
 
 use CodeIgniter\HTTP\ResponseInterface;
-
 use Jengo\Pdf\Schema\ReportTheme;
 
 interface SchemaReportInterface
@@ -29,6 +28,10 @@ interface SchemaReportInterface
     public function inline(?string $filename = null): ResponseInterface;
 
     public function download(?string $filename = null): ResponseInterface;
+
+    public function preview(bool $withToolbar = true): ResponseInterface;
+
+    public function toHtml(): string;
 
     public function save(string $destinationPath): string;
 

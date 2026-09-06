@@ -145,6 +145,16 @@ class SchemaReportBuilder implements SchemaReportInterface
         return $this->toPdf()->download($filename);
     }
 
+    public function preview(bool $withToolbar = true): ResponseInterface
+    {
+        return $this->toPdf()->preview($withToolbar);
+    }
+
+    public function toHtml(): string
+    {
+        return $this->toPdf()->toHtml();
+    }
+
     public function save(string $destinationPath): string
     {
         return $this->toPdf()->save($destinationPath);

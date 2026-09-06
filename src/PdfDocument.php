@@ -16,12 +16,14 @@ use Jengo\Pdf\Enums\PaperFormat;
 use Jengo\Pdf\Exceptions\DriverException;
 use Jengo\Pdf\Support\HeaderFooter;
 use Jengo\Pdf\Support\Margins;
+use Throwable;
 
 class PdfDocument implements PdfInterface
 {
     protected ?string $html = null;
     protected ?string $view = null;
     protected array $viewData = [];
+    protected ?string $templateName = null;
     protected ?string $url = null;
 
     protected ?PaperFormat $format = null;
@@ -72,6 +74,7 @@ class PdfDocument implements PdfInterface
     {
         $this->html = $html;
         $this->view = null;
+        $this->templateName = null;
         $this->url = null;
         $this->renderedOutput = null;
 
@@ -94,6 +97,8 @@ class PdfDocument implements PdfInterface
      */
     public function template(string $name, array $data = []): static
     {
+        $this->templateName = $name;
+
         $views = array_merge(
             is_array($this->config->views ?? null) ? $this->config->views : [],
             is_array($this->config->templating['views'] ?? null) ? $this->config->templating['views'] : []
@@ -135,6 +140,7 @@ class PdfDocument implements PdfInterface
         $this->url = $url;
         $this->html = null;
         $this->view = null;
+        $this->templateName = null;
         $this->renderedOutput = null;
 
         return $this;
@@ -173,6 +179,7 @@ class PdfDocument implements PdfInterface
         } else {
             $this->margins = new Margins($top, $right, $bottom, $left, $unit);
         }
+
         $this->renderedOutput = null;
 
         return $this;
@@ -236,10 +243,12 @@ class PdfDocument implements PdfInterface
 
     public function pageNumbers(string $format = '{page} / {pages}'): static
     {
-        $this->footer = HeaderFooter::pageNumbers($format);
-        $this->renderedOutput = null;
+        $html = sprintf(
+            '<div style="width: 100%%; text-align: right; font-size: 8pt; color: #718096; padding-right: 10mm;">%s</div>',
+            htmlspecialchars($format)
+        );
 
-        return $this;
+        return $this->footer($html);
     }
 
     public function waitForSelector(string $selector): static
@@ -275,6 +284,11 @@ class PdfDocument implements PdfInterface
 
     public function render(): string
     {
+        if (Pdf::isFaking()) {
+            Pdf::getFake()?->record($this, 'render');
+            return "%PDF-1.4 Fake PDF Output\n%%EOF";
+        }
+
         if ($this->renderedOutput !== null) {
             return $this->renderedOutput;
         }
@@ -287,6 +301,11 @@ class PdfDocument implements PdfInterface
 
     public function output(): string
     {
+        if (Pdf::isFaking()) {
+            Pdf::getFake()?->record($this, 'output');
+            return "%PDF-1.4 Fake PDF Output\n%%EOF";
+        }
+
         return $this->render();
     }
 
@@ -295,8 +314,178 @@ class PdfDocument implements PdfInterface
         return base64_encode($this->output());
     }
 
+    public function dataUri(): string
+    {
+        return 'data:application/pdf;base64,' . $this->base64();
+    }
+
+    public function toHtml(): string
+    {
+        if ($this->html !== null) {
+            return $this->html;
+        }
+
+        if ($this->view !== null) {
+            return view($this->view, $this->viewData);
+        }
+
+        return '';
+    }
+
+    public function preview(bool $withToolbar = true): ResponseInterface
+    {
+        if (Pdf::isFaking()) {
+            Pdf::getFake()?->record($this, 'preview');
+            /** @var ResponseInterface $response */
+            $response = service('response');
+            return $response->setHeader('Content-Type', 'text/html; charset=UTF-8')->setBody($this->toHtml());
+        }
+
+        $rawHtml = $this->toHtml();
+
+        if (!$withToolbar) {
+            /** @var ResponseInterface $response */
+            $response = service('response');
+            return $response->setHeader('Content-Type', 'text/html; charset=UTF-8')->setBody($rawHtml);
+        }
+
+        $format = $this->format?->value ?? 'A4';
+        $orientation = $this->orientation?->value ?? 'portrait';
+        $isLandscape = $this->orientation?->isLandscape() ?? false;
+        $widthMm = $isLandscape ? '297mm' : '210mm';
+        $minHeightMm = $isLandscape ? '210mm' : '297mm';
+
+        $previewHtml = <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jengo PDF Preview - {$format} ({$orientation})</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0f172a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #e2e8f0;
+        }
+        .jengo-preview-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #334155;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .jengo-toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .jengo-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #38bdf8;
+            letter-spacing: 0.5px;
+        }
+        .jengo-toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .jengo-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: #0284c7;
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .jengo-btn:hover { background: #0369a1; }
+        .jengo-btn-secondary {
+            background: #334155;
+            color: #f1f5f9;
+        }
+        .jengo-btn-secondary:hover { background: #475569; }
+        .jengo-preview-canvas {
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px 80px;
+            overflow-x: auto;
+        }
+        .jengo-sheet-frame {
+            width: {$widthMm};
+            min-height: {$minHeightMm};
+            background: #ffffff;
+            color: #000000;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            position: relative;
+            transform-origin: top center;
+        }
+        @media print {
+            .jengo-preview-toolbar { display: none !important; }
+            body { background: transparent !important; }
+            .jengo-preview-canvas { padding: 0 !important; }
+            .jengo-sheet-frame { box-shadow: none !important; width: 100% !important; margin: 0 !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="jengo-preview-toolbar">
+        <div class="jengo-toolbar-left">
+            <div style="font-weight: 800; font-size: 14px; color: #ffffff; display: flex; align-items: center; gap: 6px;">
+                <span style="color: #38bdf8;">Jengo</span>PDF Preview
+            </div>
+            <div class="jengo-badge">📄 {$format} &bull; {$orientation}</div>
+        </div>
+        <div class="jengo-toolbar-actions">
+            <button onclick="window.print()" class="jengo-btn jengo-btn-secondary">🖨️ Print / Emulate</button>
+            <button onclick="document.querySelector('.jengo-sheet-frame').style.width = document.querySelector('.jengo-sheet-frame').style.width === '100%' ? '{$widthMm}' : '100%'" class="jengo-btn jengo-btn-secondary">⛶ Fit Width</button>
+        </div>
+    </div>
+    <div class="jengo-preview-canvas">
+        <div class="jengo-sheet-frame">
+            {$rawHtml}
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+
+        /** @var ResponseInterface $response */
+        $response = service('response');
+        return $response->setHeader('Content-Type', 'text/html; charset=UTF-8')->setBody($previewHtml);
+    }
+
     public function save(string $destinationPath): string
     {
+        if (Pdf::isFaking()) {
+            Pdf::getFake()?->record($this, 'save', destination: $destinationPath);
+            return $destinationPath;
+        }
+
         $directory = dirname($destinationPath);
         if (!is_dir($directory)) {
             mkdir($directory, 0777, true);
@@ -325,6 +514,16 @@ class PdfDocument implements PdfInterface
             $filename .= '.pdf';
         }
 
+        if (Pdf::isFaking()) {
+            Pdf::getFake()?->record($this, 'inline', filename: $filename);
+            /** @var ResponseInterface $response */
+            $response = service('response');
+            return $response
+                ->setHeader('Content-Type', 'application/pdf')
+                ->setHeader('Content-Disposition', 'inline; filename="' . basename($filename) . '"')
+                ->setBody("%PDF-1.4 Fake PDF Inline Content\n%%EOF");
+        }
+
         $binary = $this->output();
 
         /** @var ResponseInterface $response */
@@ -346,6 +545,16 @@ class PdfDocument implements PdfInterface
             $filename .= '.pdf';
         }
 
+        if (Pdf::isFaking()) {
+            Pdf::getFake()?->record($this, 'download', filename: $filename);
+            /** @var ResponseInterface $response */
+            $response = service('response');
+            return $response
+                ->setHeader('Content-Type', 'application/pdf')
+                ->setHeader('Content-Disposition', 'attachment; filename="' . basename($filename) . '"')
+                ->setBody("%PDF-1.4 Fake PDF Download Content\n%%EOF");
+        }
+
         $binary = $this->output();
 
         /** @var ResponseInterface $response */
@@ -358,6 +567,57 @@ class PdfDocument implements PdfInterface
             ->setHeader('Cache-Control', 'private, max-age=0, must-revalidate')
             ->setHeader('Pragma', 'public')
             ->setBody($binary);
+    }
+
+    public function attachTo(mixed $email, ?string $filename = null, string $disposition = 'attachment'): static
+    {
+        $filename = $filename ?? $this->filename ?? 'document.pdf';
+        if (!str_ends_with(strtolower($filename), '.pdf')) {
+            $filename .= '.pdf';
+        }
+
+        if (Pdf::isFaking()) {
+            Pdf::getFake()?->record($this, 'attachTo', filename: $filename);
+            return $this;
+        }
+
+        if (is_object($email) && method_exists($email, 'attach')) {
+            $tempDir = sys_get_temp_dir() . '/jengo-pdf-attachments';
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0777, true);
+            }
+            $tempPath = $tempDir . '/' . uniqid('pdf_') . '_' . basename($filename);
+            file_put_contents($tempPath, $this->output());
+            $email->attach($tempPath, $disposition, basename($filename), 'application/pdf');
+        }
+
+        return $this;
+    }
+
+    public function store(string $path, ?string $disk = null): string
+    {
+        if (Pdf::isFaking()) {
+            Pdf::getFake()?->record($this, 'store', destination: $path);
+            return $path;
+        }
+
+        // Integration with jengo/storage or custom disk if available
+        if (class_exists('Jengo\Storage\Storage')) {
+            $storageClass = 'Jengo\Storage\Storage';
+            if ($disk !== null && method_exists($storageClass, 'disk')) {
+                $storageClass::disk($disk)->put($path, $this->output());
+            } else {
+                $storageClass::put($path, $this->output());
+            }
+            return $path;
+        }
+
+        // Fallback: CodeIgniter WRITEPATH or direct file storage
+        $fullPath = (defined('WRITEPATH') && !str_starts_with($path, '/'))
+            ? WRITEPATH . ltrim($path, '/')
+            : $path;
+
+        return $this->save($fullPath);
     }
 
     // Getters for Drivers
@@ -374,6 +634,11 @@ class PdfDocument implements PdfInterface
     public function getViewData(): array
     {
         return $this->viewData;
+    }
+
+    public function getTemplateName(): ?string
+    {
+        return $this->templateName;
     }
 
     public function getUrl(): ?string
