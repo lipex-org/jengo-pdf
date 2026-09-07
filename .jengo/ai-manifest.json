@@ -1,0 +1,198 @@
+{
+  "name": "jengo/pdf",
+  "description": "High-performance dual-driver PDF generation, document templating, schema reporting, and interactive browser preview engine for CodeIgniter 4 and the Jengo Framework.",
+  "version": "1.2.0",
+  "facade": {
+    "class": "Jengo\\Pdf\\Pdf",
+    "description": "Primary static entry point providing fluent document builders, schema report builders, direct HTML/View/URL renderers, testing fakes, and theme registration."
+  },
+  "drivers": [
+    {
+      "name": "dompdf",
+      "class": "Jengo\\Pdf\\Drivers\\DompdfDriver",
+      "description": "Pure PHP PDF driver with zero external system binaries. Ideal for standard server environments, invoices, receipts, and reports."
+    },
+    {
+      "name": "chromium",
+      "class": "Jengo\\Pdf\\Drivers\\ChromiumDriver",
+      "description": "Headless Chrome/Chromium driver rendering modern CSS Grid, Flexbox, Tailwind CSS, JavaScript charts (ApexCharts/Chart.js), and WebFonts with pixel-perfect fidelity."
+    }
+  ],
+  "document_builders": [
+    {
+      "method": "Pdf::invoice(string $number = 'INV-001')",
+      "class": "Jengo\\Pdf\\Documents\\Invoice",
+      "template": "invoice",
+      "description": "Type-safe builder for commercial invoices with client info, itemized table, VAT/tax, discount, shipping, payment terms, bank details, paid status, and QR/barcode integration."
+    },
+    {
+      "method": "Pdf::quotation(string $number = 'QUO-001')",
+      "class": "Jengo\\Pdf\\Documents\\Quotation",
+      "template": "quotation",
+      "description": "Type-safe builder for project estimates and proposals with scope breakdown, deliverable estimates, milestone pricing, validity period, and authorization blocks."
+    },
+    {
+      "method": "Pdf::receipt(string $number = 'REC-001')",
+      "class": "Jengo\\Pdf\\Documents\\Receipt",
+      "template": "receipt",
+      "description": "Type-safe builder for payment receipts and vouchers with large amount callout, words representation, M-Pesa / wire transaction references, and cashier stamps."
+    },
+    {
+      "method": "Pdf::deliveryNote(string $number = 'DN-001')",
+      "class": "Jengo\\Pdf\\Documents\\DeliveryNote",
+      "template": "delivery_note",
+      "description": "Type-safe builder for packing and dispatch slips with tracking numbers, carrier details, package weights, ordered vs shipped quantities, and inspection sign-offs."
+    },
+    {
+      "method": "Pdf::payslip(?string $period = null)",
+      "class": "Jengo\\Pdf\\Documents\\Payslip",
+      "template": "payslip",
+      "description": "Type-safe builder for employee salary slips with earnings, statutory deductions (PAYE, SHIF, NSSF), net pay calculations, and bank account masks."
+    },
+    {
+      "method": "Pdf::purchaseOrder(string $number = 'PO-001')",
+      "class": "Jengo\\Pdf\\Documents\\PurchaseOrder",
+      "template": "purchase_order",
+      "description": "Type-safe builder for procurement purchase orders with vendor details, delivery schedules, ship-to addresses, payment terms, and line items."
+    },
+    {
+      "method": "Pdf::certificate(string $title = 'Certificate of Excellence')",
+      "class": "Jengo\\Pdf\\Documents\\Certificate",
+      "template": "certificate",
+      "description": "Type-safe builder for landscape completion and merit certificates with recipient details, course/achievement descriptions, and multiple signatories."
+    }
+  ],
+  "schema_reporting": {
+    "builder": "Jengo\\Pdf\\Schema\\SchemaReportBuilder",
+    "entry_point": "Pdf::fromSchema(mixed $schemaOrQuery)",
+    "description": "Transforms database queries, CI4 models, entity collections, or arrays into multi-page formatted reports with repeating headers and aggregates.",
+    "column": {
+      "class": "Jengo\\Pdf\\Schema\\Column",
+      "factory": "Column::make(string $key, ?string $label = null)",
+      "methods": [
+        "width(string $width)",
+        "align(string $align)",
+        "currency(string $currency = 'KES')",
+        "date(string $format = 'M d, Y')",
+        "badge(array $mapping)",
+        "sum()",
+        "format(callable $formatter)"
+      ]
+    },
+    "themes": {
+      "class": "Jengo\\Pdf\\Schema\\ReportTheme",
+      "presets": [
+        "modern-blue",
+        "emerald",
+        "crimson",
+        "amber",
+        "indigo",
+        "slate",
+        "minimal-dark"
+      ],
+      "fluent_builder": [
+        "primary(string $hex)",
+        "secondary(string $hex)",
+        "headerText(string $hex)",
+        "zebra(string $hex)",
+        "border(string $hex)",
+        "font(string $fontFamily)",
+        "footerText(string $hex)",
+        "customCss(string $css)"
+      ]
+    }
+  },
+  "browser_preview": {
+    "method": "$doc->preview(bool $withToolbar = true): ResponseInterface",
+    "description": "Renders an interactive in-browser canvas with dark-mode toolbar, paper format badge, page counter, live zoom, fit-to-width, continuous vs paginated view toggles, keyboard shortcuts, and print/download triggers.",
+    "pagination_engine": "Automatic client-side DOM table splitting across physical millimeter sheet frames with repeating table headers, pre-table branding, summaries, footers, and watermarks."
+  },
+  "support_utilities": [
+    {
+      "name": "Watermark",
+      "class": "Jengo\\Pdf\\Support\\Watermark",
+      "methods": "Watermark::make(string|bool|array $config, float $opacity = 0.08, ?string $color = null, ?int $angle = -35, ?string $size = null)",
+      "description": "Renders angled, centered, multi-page repeating watermarks defaulting to 'JENGO'."
+    },
+    {
+      "name": "QrCode",
+      "class": "Jengo\\Pdf\\Support\\QrCode",
+      "methods": "QrCode::render(string $text, ...), QrCode::pngDataUri(string $text, ...)",
+      "description": "Zero-dependency pure-PHP vector SVG and Base64 PNG QR code generator."
+    },
+    {
+      "name": "Barcode",
+      "class": "Jengo\\Pdf\\Support\\Barcode",
+      "methods": "Barcode::render(string $code, ...), Barcode::pngDataUri(string $code, ...)",
+      "description": "Zero-dependency pure-PHP Code 128 barcode generator."
+    },
+    {
+      "name": "Currency",
+      "class": "Jengo\\Pdf\\Support\\Currency",
+      "methods": "Currency::format(mixed $amount, ?string $currency = null, ...), Currency::parse(mixed $value)",
+      "description": "International monetary amount formatter with symbol/ISO code spacing and parsing."
+    }
+  ],
+  "testing": {
+    "fake": "Jengo\\Pdf\\Testing\\PdfFake",
+    "activation": "Pdf::fake(): PdfFake",
+    "assertions": [
+      "Pdf::assertRendered(string|callable $viewOrCallback)",
+      "Pdf::assertNotRendered(string|callable $viewOrCallback)",
+      "Pdf::assertDownloaded(?string $filename = null, ?callable $callback = null)",
+      "Pdf::assertNotDownloaded(?string $filename = null)",
+      "Pdf::assertInline(?string $filename = null, ?callable $callback = null)",
+      "Pdf::assertNotInline(?string $filename = null)",
+      "Pdf::assertSaved(string|callable|null $destinationOrCallback = null)",
+      "Pdf::assertStored(string|callable|null $destinationOrCallback = null)",
+      "Pdf::assertCount(int $expectedCount)",
+      "Pdf::assertNothingRendered()",
+      "Pdf::assertViewData(string $key, mixed $expectedValue = null, ?string $template = null)",
+      "Pdf::assertSee(string $needle, ?string $template = null)"
+    ]
+  },
+  "helpers": [
+    {
+      "name": "pdf",
+      "signature": "pdf(?string $view = null, array $data = []): Jengo\\Pdf\\Contracts\\PdfInterface",
+      "description": "Fluent helper to start a PDF document or render a view template."
+    },
+    {
+      "name": "pdf_qr_code",
+      "signature": "pdf_qr_code(string $text, int $size = 120, string $color = '#000000', string $bgColor = '#ffffff', int $margin = 2, string $format = 'img'): string",
+      "description": "Render a vector QR code compatible with Dompdf and browser preview."
+    },
+    {
+      "name": "pdf_qr_data_uri",
+      "signature": "pdf_qr_data_uri(string $text, int $size = 120, string $color = '#000000', string $bgColor = '#ffffff', int $margin = 2): string",
+      "description": "Render a Base64 PNG Data URI QR code suitable for <img src='...'>."
+    },
+    {
+      "name": "pdf_barcode",
+      "signature": "pdf_barcode(string $code, int $height = 40, int $width = 2, string $color = '#000000', string $bgColor = '#ffffff', bool $showText = false, string $format = 'img'): string",
+      "description": "Render a Code 128 vector barcode."
+    },
+    {
+      "name": "pdf_barcode_data_uri",
+      "signature": "pdf_barcode_data_uri(string $code, int $height = 40, int $width = 2, string $color = '#000000', string $bgColor = '#ffffff', bool $showText = false): string",
+      "description": "Render a Base64 PNG Data URI Barcode."
+    },
+    {
+      "name": "pdf_currency",
+      "signature": "pdf_currency(mixed $amount, ?string $currency = null, ?string $locale = null, int $decimals = 2): string",
+      "description": "Format monetary amounts with consistent symbol/ISO code spacing."
+    },
+    {
+      "name": "pdf_watermark",
+      "signature": "pdf_watermark(string|bool|array $textOrConfig = 'JENGO', float $opacity = 0.08, ?string $color = null, ?int $angle = -35, ?string $size = null): string",
+      "description": "Render CSS and HTML watermark element for custom PDF views."
+    }
+  ],
+  "installers": [
+    {
+      "class": "Jengo\\Pdf\\Installers\\PdfInstaller",
+      "command": "php spark jengo:install pdf",
+      "description": "Publishes default configuration into app/Config/Pdf.php."
+    }
+  ]
+}
