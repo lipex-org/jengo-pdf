@@ -168,6 +168,36 @@ class DxFeaturesTest extends CIUnitTestCase
         Pdf::assertInline('stark-quote.pdf');
     }
 
+    public function testQuotationValidityBadgeCalculation(): void
+    {
+        // Test custom validity days calculation
+        $html1 = Pdf::template('quotation', [
+            'quoteDate'  => '2026-09-01',
+            'validUntil' => '2026-09-15',
+        ])->toHtml();
+        $this->assertStringContainsString('Valid for 14 Days', $html1);
+
+        // Test 1 day calculation
+        $html2 = Pdf::template('quotation', [
+            'quoteDate'  => '2026-09-01',
+            'validUntil' => '2026-09-02',
+        ])->toHtml();
+        $this->assertStringContainsString('Valid for 1 Day', $html2);
+
+        // Test same day calculation
+        $html3 = Pdf::template('quotation', [
+            'quoteDate'  => '2026-09-01',
+            'validUntil' => '2026-09-01',
+        ])->toHtml();
+        $this->assertStringContainsString('Valid Today Only', $html3);
+
+        // Test explicit validity text override
+        $html4 = Pdf::template('quotation', [
+            'validityText' => 'Special 45-Day Offer',
+        ])->toHtml();
+        $this->assertStringContainsString('Special 45-Day Offer', $html4);
+    }
+
     public function testFluentReceiptBuilder(): void
     {
         Pdf::fake();

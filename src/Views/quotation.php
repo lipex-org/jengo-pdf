@@ -77,6 +77,33 @@
 </head>
 <body>
 
+    <?php
+        $dateFormat = $dateFormat ?? 'M d, Y';
+        $quoteDateStr = $quoteDate ?? date($dateFormat);
+        $validUntilStr = $validUntil ?? date($dateFormat, strtotime('+30 days'));
+
+        if (!empty($validityText)) {
+            $validityBadgeText = $validityText;
+        } elseif (!empty($validityDays)) {
+            $days = (int) $validityDays;
+            $validityBadgeText = 'Valid for ' . $days . ($days === 1 ? ' Day' : ' Days');
+        } else {
+            $quoteTs = strtotime((string) $quoteDateStr);
+            $validTs = strtotime((string) $validUntilStr);
+            if ($quoteTs !== false && $validTs !== false) {
+                $diffDays = (int) round(($validTs - $quoteTs) / 86400);
+                if ($diffDays > 0) {
+                    $validityBadgeText = 'Valid for ' . $diffDays . ($diffDays === 1 ? ' Day' : ' Days');
+                } elseif ($diffDays === 0) {
+                    $validityBadgeText = 'Valid Today Only';
+                } else {
+                    $validityBadgeText = 'Valid Until ' . $validUntilStr;
+                }
+            } else {
+                $validityBadgeText = 'Valid Until ' . $validUntilStr;
+            }
+        }
+    ?>
     <table class="header-table">
         <tr>
             <td>
@@ -91,11 +118,13 @@
             <td>
                 <div class="quote-title">QUOTATION</div>
                 <div class="quote-meta">#<?= esc($quoteNumber ?? 'QUO-001') ?></div>
-                <div class="quote-meta">Date: <?= esc($quoteDate ?? date($dateFormat ?? 'M d, Y')) ?></div>
-                <div class="quote-meta">Valid Until: <?= esc($validUntil ?? date($dateFormat ?? 'M d, Y', strtotime('+30 days'))) ?></div>
+                <div class="quote-meta">Date: <?= esc($quoteDateStr) ?></div>
+                <div class="quote-meta">Valid Until: <?= esc($validUntilStr) ?></div>
+                <?php if (!isset($showValidityBadge) || $showValidityBadge !== false): ?>
                 <div style="text-align: right;">
-                    <span class="validity-badge">Valid for 30 Days</span>
+                    <span class="validity-badge"><?= esc($validityBadgeText) ?></span>
                 </div>
+                <?php endif; ?>
             </td>
         </tr>
     </table>
