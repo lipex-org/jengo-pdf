@@ -19,6 +19,12 @@ interface SchemaReportInterface
 
     public function theme(ReportTheme|string|array $theme): static;
 
+    public function brand(array|string $brand): static;
+
+    public function logo(string $logo): static;
+
+    public function footer(string $footerText): static;
+
     public function template(string $viewPath): static;
 
     public function filename(string $filename): static;

@@ -19,6 +19,9 @@ class SchemaReportBuilder implements SchemaReportInterface
     protected array $columns = [];
     protected array $aggregates = [];
     protected ReportTheme|string|array $theme = 'modern-blue';
+    protected array|string|null $customBrand = null;
+    protected ?string $customLogo = null;
+    protected ?string $customFooter = null;
     protected ?string $customTemplate = null;
     protected ?string $filename = null;
 
@@ -57,6 +60,24 @@ class SchemaReportBuilder implements SchemaReportInterface
     public function theme(ReportTheme|string|array $theme): static
     {
         $this->theme = $theme;
+        return $this;
+    }
+
+    public function brand(array|string $brand): static
+    {
+        $this->customBrand = $brand;
+        return $this;
+    }
+
+    public function logo(string $logo): static
+    {
+        $this->customLogo = $logo;
+        return $this;
+    }
+
+    public function footer(string $footerText): static
+    {
+        $this->customFooter = $footerText;
         return $this;
     }
 
@@ -103,6 +124,17 @@ class SchemaReportBuilder implements SchemaReportInterface
         $config = config('Pdf') ?? new \Jengo\Pdf\Config\Pdf();
         $templating = $config->templating ?? [];
         $brand = $templating['brand'] ?? [];
+
+        if (is_string($this->customBrand)) {
+            $brand['name'] = $this->customBrand;
+        } elseif (is_array($this->customBrand)) {
+            $brand = array_merge($brand, $this->customBrand);
+        }
+
+        if ($this->customLogo !== null) {
+            $brand['logo'] = $this->customLogo;
+        }
+
         $defaults = $templating['defaults'] ?? [];
         $theme = ReportTheme::make($this->theme);
 
@@ -115,7 +147,7 @@ class SchemaReportBuilder implements SchemaReportInterface
             'theme'         => $theme,
             'themeColor'    => $theme->primary,
             'brand'         => $brand,
-            'footerText'    => $brand['footer_text'] ?? null,
+            'footerText'    => $this->customFooter ?? $brand['footer_text'] ?? null,
             'showPoweredBy' => $brand['show_powered_by'] ?? true,
             'dateFormat'    => $defaults['date_format'] ?? 'Y-m-d H:i:s',
         ];

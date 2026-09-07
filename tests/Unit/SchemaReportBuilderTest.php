@@ -289,4 +289,29 @@ class SchemaReportBuilderTest extends TestCase
         $this->assertStringContainsString('SUM:', $html);
         $this->assertStringContainsString('KES 1,500.00', $html);
     }
+
+    public function testSchemaReportBranding(): void
+    {
+        $dataset = [
+            ['id' => 1, 'task' => 'Compile Kernel'],
+        ];
+
+        $report = Pdf::fromSchema($dataset)
+            ->title('Infrastructure Status')
+            ->brand([
+                'name'    => 'Wayne Aerospace Technologies',
+                'tagline' => 'Next-Gen Avionics & Systems',
+                'email'   => 'ops@wayneaero.com',
+            ])
+            ->logo('https://example.com/logo.png')
+            ->footer('CONFIDENTIAL — For Board Review Only');
+
+        $html = $report->toHtml();
+        $this->assertStringContainsString('Wayne Aerospace Technologies', $html);
+        $this->assertStringContainsString('Next-Gen Avionics', $html);
+        $this->assertStringContainsString('ops@wayneaero.com', $html);
+        $this->assertStringContainsString('https://example.com/logo.png', $html);
+        $this->assertStringContainsString('CONFIDENTIAL — For Board Review Only', $html);
+        $this->assertStringContainsString('Official Schema Report', $html);
+    }
 }
