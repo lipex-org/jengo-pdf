@@ -613,7 +613,19 @@ class PdfDocument implements PdfInterface
             const printableHeightPx = (heightMm - paddingMm) * ratio - 20; // 20px room for sheet footer
 
             // Look for table-based documents (e.g. Schema Reports, itemized invoices)
-            const mainTable = sourceContent.querySelector('table');
+            const allTables = Array.from(sourceContent.querySelectorAll('table'));
+            let mainTable = null;
+            let maxRows = 0;
+
+            for (const tbl of allTables) {
+                const tbody = tbl.querySelector('tbody');
+                const rowCount = tbody ? tbody.rows.length : tbl.rows.length;
+                if (rowCount > maxRows) {
+                    maxRows = rowCount;
+                    mainTable = tbl;
+                }
+            }
+
             const tableBody = mainTable ? mainTable.querySelector('tbody') : null;
 
             if (mainTable && tableBody && tableBody.rows.length > 5) {
@@ -621,18 +633,23 @@ class PdfDocument implements PdfInterface
                 const tableRows = Array.from(tableBody.rows);
                 const thead = mainTable.querySelector('thead');
                 const tfoot = mainTable.querySelector('tfoot');
+
+                let topLevelMainNode = mainTable;
+                while (topLevelMainNode.parentElement && topLevelMainNode.parentElement !== sourceContent) {
+                    topLevelMainNode = topLevelMainNode.parentElement;
+                }
                 
-                // Elements before table (header, title, subtitle)
+                // Elements before table (brand, header, title, subtitle, divider)
                 const preElements = [];
                 let curr = sourceContent.firstElementChild;
-                while (curr && curr !== mainTable) {
+                while (curr && curr !== topLevelMainNode) {
                     preElements.push(curr.cloneNode(true));
                     curr = curr.nextElementSibling;
                 }
 
-                // Elements after table (footer text, powered by)
+                // Elements after table (totals, footer text, powered by)
                 const postElements = [];
-                curr = mainTable.nextElementSibling;
+                curr = topLevelMainNode.nextElementSibling;
                 while (curr) {
                     postElements.push(curr.cloneNode(true));
                     curr = curr.nextElementSibling;
