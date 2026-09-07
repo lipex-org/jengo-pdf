@@ -118,6 +118,14 @@ class Pdf extends BaseConfig
         'defaults' => [
             'currency'    => '$',
             'date_format' => 'M d, Y',
+            'watermark'   => [
+                'enabled' => false,
+                'text'    => 'JENGO',
+                'opacity' => 0.08,
+                'color'   => '#64748b',
+                'size'    => '64pt',
+                'angle'   => -35,
+            ],
         ],
     ];
 

@@ -165,4 +165,59 @@ class EnumsAndSupportTest extends TestCase
         $this->assertSame(1234.56, \Jengo\Pdf\Support\Currency::parse('$1,234.56'));
         $this->assertSame(-500.0, \Jengo\Pdf\Support\Currency::parse('-KES 500.00'));
     }
+
+    public function testWatermarkSupportClass(): void
+    {
+        // Default text is 'JENGO'
+        $wmDefault = \Jengo\Pdf\Support\Watermark::make();
+        $this->assertSame('JENGO', $wmDefault->text);
+        $this->assertSame(0.08, $wmDefault->opacity);
+        $this->assertSame('#64748b', $wmDefault->color);
+        $this->assertSame(-35, $wmDefault->angle);
+        $this->assertSame('64pt', $wmDefault->size);
+        $this->assertTrue($wmDefault->enabled);
+
+        // Custom string
+        $wmCustom = \Jengo\Pdf\Support\Watermark::make('CONFIDENTIAL', 0.15, '#dc2626', -45, '72pt');
+        $this->assertSame('CONFIDENTIAL', $wmCustom->text);
+        $this->assertSame(0.15, $wmCustom->opacity);
+        $this->assertSame('#dc2626', $wmCustom->color);
+        $this->assertSame(-45, $wmCustom->angle);
+        $this->assertSame('72pt', $wmCustom->size);
+
+        // Array config
+        $wmArray = \Jengo\Pdf\Support\Watermark::make([
+            'text'    => 'DRAFT',
+            'opacity' => 0.1,
+            'color'   => '#0284c7',
+            'angle'   => -30,
+            'size'    => '50pt',
+            'enabled' => true,
+        ]);
+        $this->assertSame('DRAFT', $wmArray->text);
+        $this->assertSame(0.1, $wmArray->opacity);
+        $this->assertSame('#0284c7', $wmArray->color);
+        $this->assertSame(-30, $wmArray->angle);
+        $this->assertSame('50pt', $wmArray->size);
+        $this->assertTrue($wmArray->enabled);
+
+        // Disabled boolean
+        $wmDisabled = \Jengo\Pdf\Support\Watermark::make(false);
+        $this->assertFalse($wmDisabled->enabled);
+        $this->assertSame('', $wmDisabled->renderHtml());
+        $this->assertSame('', $wmDisabled->renderCss());
+
+        // HTML rendering
+        $html = $wmCustom->renderHtml();
+        $this->assertStringContainsString('CONFIDENTIAL', $html);
+        $this->assertStringContainsString('class="jengo-watermark"', $html);
+        $this->assertStringContainsString('rotate(-45deg)', $html);
+        $this->assertStringContainsString('opacity: 0.15', $html);
+
+        // Helper function
+        helper('pdf');
+        $helperHtml = pdf_watermark('JENGO');
+        $this->assertStringContainsString('JENGO', $helperHtml);
+        $this->assertStringContainsString('jengo-watermark', $helperHtml);
+    }
 }

@@ -333,4 +333,37 @@ class DxFeaturesTest extends CIUnitTestCase
         $doc->attachTo($emailMock, 'invoice.pdf');
         $this->assertTrue(true);
     }
+
+    public function testWatermarkDocumentAndBuilders(): void
+    {
+        // 1. Pdf::watermark() facade
+        $doc = Pdf::watermark('JENGO')->html('<h1>Confidential Report</h1>');
+        $html = $doc->toHtml();
+        $this->assertStringContainsString('class="jengo-watermark"', $html);
+        $this->assertStringContainsString('JENGO', $html);
+
+        // 2. Invoice with custom watermark
+        $invoice = Pdf::invoice('INV-999')
+            ->customer('Wayne Enterprises')
+            ->addItem('Batmobile Maintenance', 25000)
+            ->watermark('PAID', opacity: 0.12, color: '#16a34a');
+        $invoiceHtml = $invoice->toHtml();
+        $this->assertStringContainsString('class="jengo-watermark"', $invoiceHtml);
+        $this->assertStringContainsString('PAID', $invoiceHtml);
+        $this->assertStringContainsString('#16a34a', $invoiceHtml);
+
+        // 3. Schema report with watermark
+        $report = Pdf::fromSchema([
+            ['id' => 1, 'name' => 'Widget A', 'sales' => 1200],
+            ['id' => 2, 'name' => 'Widget B', 'sales' => 3400],
+        ])->title('Quarterly Sales')->watermark('SAMPLE');
+        $reportHtml = $report->toHtml();
+        $this->assertStringContainsString('class="jengo-watermark"', $reportHtml);
+        $this->assertStringContainsString('SAMPLE', $reportHtml);
+
+        // 4. Watermark disabled
+        $disabledDoc = Pdf::html('<h1>Public Document</h1>')->watermark(false);
+        $disabledHtml = $disabledDoc->toHtml();
+        $this->assertStringNotContainsString('class="jengo-watermark"', $disabledHtml);
+    }
 }

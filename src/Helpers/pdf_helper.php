@@ -102,3 +102,19 @@ if (!function_exists('pdf_currency')) {
     }
 }
 
+if (!function_exists('pdf_watermark')) {
+    /**
+     * Render the CSS and HTML watermark element for custom PDF views.
+     */
+    function pdf_watermark(
+        string|bool|array $textOrConfig = 'JENGO',
+        float $opacity = 0.08,
+        ?string $color = null,
+        ?int $angle = -35,
+        ?string $size = null
+    ): string {
+        return \Jengo\Pdf\Support\Watermark::make($textOrConfig, $opacity, $color, $angle, $size)->renderHtml();
+    }
+}
+
+

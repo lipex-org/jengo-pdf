@@ -176,6 +176,17 @@ abstract class AbstractDocumentBuilder implements PdfInterface
         return $this;
     }
 
+    public function watermark(
+        string|bool|array $textOrConfig = 'JENGO',
+        float $opacity = 0.08,
+        ?string $color = null,
+        ?int $angle = -35,
+        ?string $size = null
+    ): static {
+        $this->document->watermark($textOrConfig, $opacity, $color, $angle, $size);
+        return $this;
+    }
+
     public function emulateMedia(MediaType|string $media): static
     {
         $this->document->emulateMedia($media);

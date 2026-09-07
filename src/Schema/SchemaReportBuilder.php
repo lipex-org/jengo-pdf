@@ -24,6 +24,7 @@ class SchemaReportBuilder implements SchemaReportInterface
     protected ?string $customFooter = null;
     protected ?string $customTemplate = null;
     protected ?string $filename = null;
+    protected string|bool|array|null $watermark = null;
 
     protected ?PaperFormat $format = PaperFormat::A4;
     protected ?Orientation $orientation = Orientation::PORTRAIT;
@@ -78,6 +79,29 @@ class SchemaReportBuilder implements SchemaReportInterface
     public function footer(string $footerText): static
     {
         $this->customFooter = $footerText;
+        return $this;
+    }
+
+    public function watermark(
+        string|bool|array $textOrConfig = 'JENGO',
+        float $opacity = 0.08,
+        ?string $color = null,
+        ?int $angle = -35,
+        ?string $size = null
+    ): static {
+        if (is_string($textOrConfig) && ($opacity !== 0.08 || $color !== null || $angle !== -35 || $size !== null)) {
+            $this->watermark = [
+                'text'    => $textOrConfig,
+                'opacity' => $opacity,
+                'color'   => $color ?? '#64748b',
+                'angle'   => $angle ?? -35,
+                'size'    => $size ?? '64pt',
+                'enabled' => true,
+            ];
+        } else {
+            $this->watermark = $textOrConfig;
+        }
+
         return $this;
     }
 
@@ -157,6 +181,12 @@ class SchemaReportBuilder implements SchemaReportInterface
         $doc = Pdf::html($html)
             ->format($this->format ?? PaperFormat::A4)
             ->orientation($this->orientation ?? Orientation::PORTRAIT);
+
+        if ($this->watermark !== null) {
+            $doc->watermark($this->watermark);
+        } elseif (isset($defaults['watermark']) && is_array($defaults['watermark']) && !empty($defaults['watermark']['enabled'])) {
+            $doc->watermark($defaults['watermark']);
+        }
 
         if ($this->filename !== null) {
             $doc->filename($this->filename);

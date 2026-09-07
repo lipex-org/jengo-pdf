@@ -36,6 +36,14 @@ interface PdfInterface
 
     public function background(bool $showBackground = true): static;
 
+    public function watermark(
+        string|bool|array $textOrConfig = 'JENGO',
+        float $opacity = 0.08,
+        ?string $color = null,
+        ?int $angle = -35,
+        ?string $size = null
+    ): static;
+
     public function emulateMedia(MediaType|string $media): static;
 
     public function header(string $html, float $height = 15.0, string $unit = 'mm'): static;

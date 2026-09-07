@@ -222,6 +222,19 @@ class Pdf
     }
 
     /**
+     * Create a new PDF document with a configured watermark.
+     */
+    public static function watermark(
+        string|bool|array $textOrConfig = 'JENGO',
+        float $opacity = 0.08,
+        ?string $color = null,
+        ?int $angle = -35,
+        ?string $size = null
+    ): PdfInterface {
+        return static::newDocument()->watermark($textOrConfig, $opacity, $color, $angle, $size);
+    }
+
+    /**
      * Create a new clean PdfDocument instance.
      */
     public static function newDocument(): PdfDocument

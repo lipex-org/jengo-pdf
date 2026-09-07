@@ -16,6 +16,7 @@ use Jengo\Pdf\Enums\PaperFormat;
 use Jengo\Pdf\Exceptions\DriverException;
 use Jengo\Pdf\Support\HeaderFooter;
 use Jengo\Pdf\Support\Margins;
+use Jengo\Pdf\Support\Watermark;
 use Throwable;
 
 class PdfDocument implements PdfInterface
@@ -32,6 +33,7 @@ class PdfDocument implements PdfInterface
     protected float $scale = 1.0;
     protected bool $background = true;
     protected ?MediaType $mediaType = null;
+    protected ?Watermark $watermark = null;
 
     protected ?HeaderFooter $header = null;
     protected ?HeaderFooter $footer = null;
@@ -132,6 +134,13 @@ class PdfDocument implements PdfInterface
         $data['footerText'] ??= $brand['footer_text'] ?? null;
         $data['showPoweredBy'] ??= (bool) ($brand['show_powered_by'] ?? false);
 
+        // Merge watermark configuration
+        if (isset($data['watermark'])) {
+            $this->watermark($data['watermark']);
+        } elseif ($this->watermark === null && isset($defaults['watermark']) && is_array($defaults['watermark']) && !empty($defaults['watermark']['enabled'])) {
+            $this->watermark($defaults['watermark']);
+        }
+
         return $this->view($views[$name], $data);
     }
 
@@ -199,6 +208,24 @@ class PdfDocument implements PdfInterface
         $this->renderedOutput = null;
 
         return $this;
+    }
+
+    public function watermark(
+        string|bool|array|Watermark $textOrConfig = 'JENGO',
+        float $opacity = 0.08,
+        ?string $color = null,
+        ?int $angle = -35,
+        ?string $size = null
+    ): static {
+        $this->watermark = Watermark::make($textOrConfig, $opacity, $color, $angle, $size);
+        $this->renderedOutput = null;
+
+        return $this;
+    }
+
+    public function getWatermark(): ?Watermark
+    {
+        return $this->watermark;
     }
 
     public function emulateMedia(MediaType|string $media): static
@@ -321,15 +348,28 @@ class PdfDocument implements PdfInterface
 
     public function toHtml(): string
     {
+        $html = '';
         if ($this->html !== null) {
-            return $this->html;
+            $html = $this->html;
+        } elseif ($this->view !== null) {
+            $html = view($this->view, $this->viewData);
         }
 
-        if ($this->view !== null) {
-            return view($this->view, $this->viewData);
+        $watermark = $this->watermark;
+        if ($watermark === null && isset($this->viewData['watermark'])) {
+            $watermark = Watermark::make($this->viewData['watermark']);
         }
 
-        return '';
+        if ($watermark !== null && $watermark->enabled) {
+            $watermarkHtml = $watermark->renderHtml();
+            if (stripos($html, '</body>') !== false) {
+                $html = str_ireplace('</body>', $watermarkHtml . '</body>', $html);
+            } else {
+                $html .= $watermarkHtml;
+            }
+        }
+
+        return $html;
     }
 
     public function preview(bool $withToolbar = true): ResponseInterface
@@ -495,9 +535,21 @@ class PdfDocument implements PdfInterface
             flex-direction: column;
             justify-content: space-between;
         }
+        .jengo-sheet-frame .jengo-watermark {
+            position: absolute !important;
+            top: 50% !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100% !important;
+            transform: translateY(-50%) rotate(-35deg) !important;
+            pointer-events: none !important;
+            z-index: 0 !important;
+        }
         .jengo-sheet-content {
             flex: 1 1 auto;
             overflow: hidden;
+            position: relative;
+            z-index: 1;
         }
         .jengo-sheet-number {
             font-size: 8pt;
@@ -507,6 +559,8 @@ class PdfDocument implements PdfInterface
             padding-top: 4px;
             margin-top: 4px;
             flex-shrink: 0;
+            position: relative;
+            z-index: 1;
         }
         .jengo-continuous .jengo-sheet-frame {
             height: auto !important;
@@ -603,6 +657,8 @@ class PdfDocument implements PdfInterface
             const sourceContent = getSourceContent();
             if (!container || !sourceContent) return;
 
+            const watermarkEl = sourceContent.querySelector('.jengo-watermark');
+
             const isLandscape = {$isLandscapeJs};
             const widthMm = isLandscape ? 297 : 210;
             const heightMm = isLandscape ? 210 : 297;
@@ -643,7 +699,9 @@ class PdfDocument implements PdfInterface
                 const preElements = [];
                 let curr = sourceContent.firstElementChild;
                 while (curr && curr !== topLevelMainNode) {
-                    preElements.push(curr.cloneNode(true));
+                    if (!curr.classList.contains('jengo-watermark')) {
+                        preElements.push(curr.cloneNode(true));
+                    }
                     curr = curr.nextElementSibling;
                 }
 
@@ -651,7 +709,9 @@ class PdfDocument implements PdfInterface
                 const postElements = [];
                 curr = topLevelMainNode.nextElementSibling;
                 while (curr) {
-                    postElements.push(curr.cloneNode(true));
+                    if (!curr.classList.contains('jengo-watermark')) {
+                        postElements.push(curr.cloneNode(true));
+                    }
                     curr = curr.nextElementSibling;
                 }
 
@@ -663,6 +723,10 @@ class PdfDocument implements PdfInterface
                     const pageFrame = document.createElement('div');
                     pageFrame.className = 'jengo-sheet-frame';
                     pageFrame.id = 'jengo-sheet-' + pageIndex;
+
+                    if (watermarkEl) {
+                        pageFrame.appendChild(watermarkEl.cloneNode(true));
+                    }
 
                     const pageContent = document.createElement('div');
                     pageContent.className = 'jengo-sheet-content';
@@ -723,9 +787,16 @@ class PdfDocument implements PdfInterface
                 pageFrame.className = 'jengo-sheet-frame';
                 pageFrame.id = 'jengo-sheet-1';
 
+                if (watermarkEl) {
+                    pageFrame.appendChild(watermarkEl.cloneNode(true));
+                }
+
                 const pageContent = document.createElement('div');
                 pageContent.className = 'jengo-sheet-content';
-                pageContent.innerHTML = sourceContent.innerHTML;
+                const clonedContent = sourceContent.cloneNode(true);
+                const wmInside = clonedContent.querySelector('.jengo-watermark');
+                if (wmInside) wmInside.remove();
+                pageContent.innerHTML = clonedContent.innerHTML;
                 pageFrame.appendChild(pageContent);
 
                 const pageNumberEl = document.createElement('div');
@@ -840,7 +911,14 @@ class PdfDocument implements PdfInterface
                 document.getElementById('jengoViewModeBtn').textContent = '📑 Paginated';
                 document.getElementById('jengoPageNav').style.display = 'none';
                 if (container && storage) {
-                    container.innerHTML = '<div class="jengo-sheet-frame" id="jengo-sheet-1"><div class="jengo-sheet-content">' + storage.innerHTML + '</div></div>';
+                    const clonedStorage = storage.cloneNode(true);
+                    const wm = clonedStorage.querySelector('.jengo-watermark');
+                    let wmHtml = '';
+                    if (wm) {
+                        wmHtml = wm.outerHTML;
+                        wm.remove();
+                    }
+                    container.innerHTML = '<div class="jengo-sheet-frame" id="jengo-sheet-1">' + wmHtml + '<div class="jengo-sheet-content">' + clonedStorage.innerHTML + '</div></div>';
                 }
             }
         }

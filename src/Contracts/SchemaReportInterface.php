@@ -25,6 +25,14 @@ interface SchemaReportInterface
 
     public function footer(string $footerText): static;
 
+    public function watermark(
+        string|bool|array $textOrConfig = 'JENGO',
+        float $opacity = 0.08,
+        ?string $color = null,
+        ?int $angle = -35,
+        ?string $size = null
+    ): static;
+
     public function template(string $viewPath): static;
 
     public function filename(string $filename): static;
