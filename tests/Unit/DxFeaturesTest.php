@@ -29,7 +29,7 @@ class DxFeaturesTest extends CIUnitTestCase
         $fake = Pdf::fake();
         $this->assertTrue(Pdf::isFaking());
 
-        Pdf::assertNothingRendered();
+        $fake->assertNothingRendered();
 
         // 1. Download Invoice
         Pdf::template('invoice', [
@@ -37,27 +37,27 @@ class DxFeaturesTest extends CIUnitTestCase
             'customer'      => ['name' => 'Acme Labs'],
         ])->download('invoice-9999.pdf');
 
-        Pdf::assertRendered('invoice');
-        Pdf::assertDownloaded('invoice-9999.pdf');
-        Pdf::assertViewData('invoiceNumber', 'INV-9999');
-        Pdf::assertViewData('customer.name', 'Acme Labs');
-        Pdf::assertCount(1);
-        Pdf::assertNotDownloaded('other.pdf');
-        Pdf::assertNotRendered('quotation');
+        $fake->assertRendered('invoice');
+        $fake->assertDownloaded('invoice-9999.pdf');
+        $fake->assertViewData('invoiceNumber', 'INV-9999');
+        $fake->assertViewData('customer.name', 'Acme Labs');
+        $fake->assertCount(1);
+        $fake->assertNotDownloaded('other.pdf');
+        $fake->assertNotRendered('quotation');
 
         // 2. Inline Quotation
         Pdf::template('quotation', [
             'quoteNumber' => 'QUO-500',
         ])->inline('quote.pdf');
 
-        Pdf::assertRendered('quotation');
-        Pdf::assertInline('quote.pdf');
-        Pdf::assertCount(2);
+        $fake->assertRendered('quotation');
+        $fake->assertInline('quote.pdf');
+        $fake->assertCount(2);
 
         // 3. Save to disk
         Pdf::html('<h1>Test Document</h1>')->save('/tmp/test-doc.pdf');
-        Pdf::assertSaved('/tmp/test-doc.pdf');
-        Pdf::assertCount(3);
+        $fake->assertSaved('/tmp/test-doc.pdf');
+        $fake->assertCount(3);
 
         Pdf::reset();
         $this->assertFalse(Pdf::isFaking());
@@ -121,7 +121,7 @@ class DxFeaturesTest extends CIUnitTestCase
 
     public function testFluentInvoiceBuilder(): void
     {
-        Pdf::fake();
+        $fake = Pdf::fake();
 
         $invoice = Pdf::invoice('INV-2026-0042')
             ->customer('Wayne Enterprises', address: '1007 Mountain Drive', email: 'bruce@wayne.com')
@@ -144,12 +144,12 @@ class DxFeaturesTest extends CIUnitTestCase
         $this->assertSame(2000.00, $data['discount']);
 
         $invoice->download('bat-invoice.pdf');
-        Pdf::assertDownloaded('bat-invoice.pdf');
+        $fake->assertDownloaded('bat-invoice.pdf');
     }
 
     public function testFluentQuotationBuilder(): void
     {
-        Pdf::fake();
+        $fake = Pdf::fake();
 
         $quote = Pdf::quotation('QUO-777')
             ->client('Stark Industries', email: 'tony@stark.com')
@@ -165,7 +165,7 @@ class DxFeaturesTest extends CIUnitTestCase
         $this->assertSame('Valid for 30 days', $data['terms']);
 
         $quote->inline('stark-quote.pdf');
-        Pdf::assertInline('stark-quote.pdf');
+        $fake->assertInline('stark-quote.pdf');
     }
 
     public function testQuotationValidityBadgeCalculation(): void
@@ -200,7 +200,7 @@ class DxFeaturesTest extends CIUnitTestCase
 
     public function testFluentReceiptBuilder(): void
     {
-        Pdf::fake();
+        $fake = Pdf::fake();
 
         $receipt = Pdf::receipt('REC-8888')
             ->customer('Peter Parker', email: 'peter@dailybugle.com')
@@ -217,12 +217,12 @@ class DxFeaturesTest extends CIUnitTestCase
         $this->assertSame('QWE891238X', $data['transactionRef']);
 
         $receipt->download('receipt-8888.pdf');
-        Pdf::assertDownloaded('receipt-8888.pdf');
+        $fake->assertDownloaded('receipt-8888.pdf');
     }
 
     public function testFluentDeliveryNoteBuilder(): void
     {
-        Pdf::fake();
+        $fake = Pdf::fake();
 
         $dn = Pdf::deliveryNote('DN-444')
             ->recipient('Daily Planet HQ', address: 'Metropolis Plaza')
@@ -239,12 +239,12 @@ class DxFeaturesTest extends CIUnitTestCase
         $this->assertSame('FF-991823', $data['carrier']['tracking_number']);
 
         $dn->save('/tmp/dn-444.pdf');
-        Pdf::assertSaved('/tmp/dn-444.pdf');
+        $fake->assertSaved('/tmp/dn-444.pdf');
     }
 
     public function testFluentPayslipBuilder(): void
     {
-        Pdf::fake();
+        $fake = Pdf::fake();
 
         $payslip = Pdf::payslip('August 2026')
             ->employee('Clark Kent', 'EMP-001', designation: 'Senior Reporter', department: 'Newsroom')
@@ -262,12 +262,12 @@ class DxFeaturesTest extends CIUnitTestCase
         $this->assertCount(2, $data['deductions']);
 
         $payslip->download('payslip-clark.pdf');
-        Pdf::assertDownloaded('payslip-clark.pdf');
+        $fake->assertDownloaded('payslip-clark.pdf');
     }
 
     public function testFluentPurchaseOrderBuilder(): void
     {
-        Pdf::fake();
+        $fake = Pdf::fake();
 
         $po = Pdf::purchaseOrder('PO-9912')
             ->vendor('Cyberdyne Systems', contact: 'Miles Dyson', email: 'dyson@cyberdyne.com')
@@ -285,12 +285,12 @@ class DxFeaturesTest extends CIUnitTestCase
         $this->assertSame('Net 30', $data['paymentTerms']);
 
         $po->download('po-9912.pdf');
-        Pdf::assertDownloaded('po-9912.pdf');
+        $fake->assertDownloaded('po-9912.pdf');
     }
 
     public function testFluentCertificateBuilder(): void
     {
-        Pdf::fake();
+        $fake = Pdf::fake();
 
         $cert = Pdf::certificate('Certificate of Excellence')
             ->recipient('Ada Lovelace')
@@ -307,19 +307,19 @@ class DxFeaturesTest extends CIUnitTestCase
         $this->assertCount(2, $data['signatories']);
 
         $cert->download('certificate.pdf');
-        Pdf::assertDownloaded('certificate.pdf');
+        $fake->assertDownloaded('certificate.pdf');
     }
 
     public function testStoreAndAttachToMethods(): void
     {
-        Pdf::fake();
+        $fake = Pdf::fake();
 
         $doc = Pdf::html('<h1>Report</h1>');
 
         // Store
         $path = $doc->store('reports/monthly.pdf');
         $this->assertSame('reports/monthly.pdf', $path);
-        Pdf::assertSaved();
+        $fake->assertSaved();
 
         // AttachTo fake object
         $emailMock = new class {

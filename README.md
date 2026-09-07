@@ -279,7 +279,7 @@ Pdf::invoice()->watermark('CONFIDENTIAL', opacity: 0.15, color: '#dc2626')->prev
 
 ## 🧪 Testing with `Pdf::fake()`
 
-Test your PDF generation endpoints and assertions without compiling actual binary files:
+Test your PDF generation endpoints and assertions in-memory without compiling actual binary files. All testing assertions are encapsulated cleanly in `Jengo\Pdf\Testing\PdfFake` (or via `PdfTestAssertionsTrait`):
 
 ```php
 use Jengo\Pdf\Pdf;
@@ -289,41 +289,66 @@ class InvoiceTest extends TestCase
 {
     public function testInvoiceDownload(): void
     {
-        Pdf::fake();
+        // 1. Activate testing double
+        $fake = Pdf::fake();
 
+        // 2. Execute controller or action
         $this->get('/invoices/INV-001/download');
 
-        // Assertions
-        Pdf::assertDownloaded('invoice-INV-001.pdf');
-        Pdf::assertViewData('invoiceNumber', 'INV-001');
-        Pdf::assertSee('Wayne Enterprises');
-        Pdf::assertCount(1);
+        // 3. Assert on the PdfFake instance
+        $fake->assertDownloaded('invoice-INV-001.pdf');
+        $fake->assertViewData('invoiceNumber', 'INV-001');
+        $fake->assertSee('Wayne Enterprises');
+        $fake->assertCount(1);
     }
 
     public function testNothingRenderedOnUnauthorized(): void
     {
-        Pdf::fake();
+        $fake = Pdf::fake();
 
         $this->get('/invoices/secret/download');
 
-        Pdf::assertNothingRendered();
+        $fake->assertNothingRendered();
     }
 }
 ```
 
-**Available Assertions**:
-- `Pdf::assertRendered(string|callable $viewOrCallback)`
-- `Pdf::assertNotRendered(string|callable $viewOrCallback)`
-- `Pdf::assertDownloaded(?string $filename = null, ?callable $callback = null)`
-- `Pdf::assertNotDownloaded(?string $filename = null)`
-- `Pdf::assertInline(?string $filename = null, ?callable $callback = null)`
-- `Pdf::assertNotInline(?string $filename = null)`
-- `Pdf::assertSaved(string|callable|null $destinationOrCallback = null)`
-- `Pdf::assertStored(string|callable|null $destinationOrCallback = null)`
-- `Pdf::assertViewData(string $key, mixed $expectedValue = null, ?string $template = null)`
-- `Pdf::assertSee(string $needle, ?string $template = null)`
-- `Pdf::assertCount(int $expectedCount)`
-- `Pdf::assertNothingRendered()`
+#### Optional Test Case Trait
+You can also use `Jengo\Pdf\Testing\Concerns\PdfTestAssertionsTrait` in your `TestCase`:
+
+```php
+use Jengo\Pdf\Testing\Concerns\PdfTestAssertionsTrait;
+use Tests\TestCase;
+
+class QuotationTest extends TestCase
+{
+    use PdfTestAssertionsTrait;
+
+    public function testQuotationStream(): void
+    {
+        $this->pdfFake();
+
+        $this->get('/quotes/QUO-001/preview');
+
+        $this->assertPdfRendered('quotation');
+        $this->assertPdfInline('quote.pdf');
+    }
+}
+```
+
+**Available `PdfFake` Assertions**:
+- `$fake->assertRendered(string|callable $viewOrCallback)`
+- `$fake->assertNotRendered(string|callable $viewOrCallback)`
+- `$fake->assertDownloaded(?string $filename = null, ?callable $callback = null)`
+- `$fake->assertNotDownloaded(?string $filename = null)`
+- `$fake->assertInline(?string $filename = null, ?callable $callback = null)`
+- `$fake->assertNotInline(?string $filename = null)`
+- `$fake->assertSaved(string|callable|null $destinationOrCallback = null)`
+- `$fake->assertStored(string|callable|null $destinationOrCallback = null)`
+- `$fake->assertViewData(string $key, mixed $expectedValue = null, ?string $template = null)`
+- `$fake->assertSee(string $needle, ?string $template = null)`
+- `$fake->assertCount(int $expectedCount)`
+- `$fake->assertNothingRendered()`
 
 ---
 

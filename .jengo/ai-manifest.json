@@ -135,20 +135,21 @@
   ],
   "testing": {
     "fake": "Jengo\\Pdf\\Testing\\PdfFake",
-    "activation": "Pdf::fake(): PdfFake",
+    "activation": "Pdf::fake(): Jengo\\Pdf\\Testing\\PdfFake",
+    "trait": "Jengo\\Pdf\\Testing\\Concerns\\PdfTestAssertionsTrait",
     "assertions": [
-      "Pdf::assertRendered(string|callable $viewOrCallback)",
-      "Pdf::assertNotRendered(string|callable $viewOrCallback)",
-      "Pdf::assertDownloaded(?string $filename = null, ?callable $callback = null)",
-      "Pdf::assertNotDownloaded(?string $filename = null)",
-      "Pdf::assertInline(?string $filename = null, ?callable $callback = null)",
-      "Pdf::assertNotInline(?string $filename = null)",
-      "Pdf::assertSaved(string|callable|null $destinationOrCallback = null)",
-      "Pdf::assertStored(string|callable|null $destinationOrCallback = null)",
-      "Pdf::assertCount(int $expectedCount)",
-      "Pdf::assertNothingRendered()",
-      "Pdf::assertViewData(string $key, mixed $expectedValue = null, ?string $template = null)",
-      "Pdf::assertSee(string $needle, ?string $template = null)"
+      "$fake->assertRendered(string|callable $viewOrCallback)",
+      "$fake->assertNotRendered(string|callable $viewOrCallback)",
+      "$fake->assertDownloaded(?string $filename = null, ?callable $callback = null)",
+      "$fake->assertNotDownloaded(?string $filename = null)",
+      "$fake->assertInline(?string $filename = null, ?callable $callback = null)",
+      "$fake->assertNotInline(?string $filename = null)",
+      "$fake->assertSaved(string|callable|null $destinationOrCallback = null)",
+      "$fake->assertStored(string|callable|null $destinationOrCallback = null)",
+      "$fake->assertCount(int $expectedCount)",
+      "$fake->assertNothingRendered()",
+      "$fake->assertViewData(string $key, mixed $expectedValue = null, ?string $template = null)",
+      "$fake->assertSee(string $needle, ?string $template = null)"
     ]
   },
   "helpers": [
