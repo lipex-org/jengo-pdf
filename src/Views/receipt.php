@@ -107,7 +107,7 @@
 
     <div class="callout-amount">
         <div class="amount-label">Amount Received</div>
-        <div class="amount-value"><?= esc($currency ?? '$') ?><?= number_format((float) ($amountPaid ?? 0), 2) ?></div>
+        <div class="amount-value"><?= \Jengo\Pdf\Support\Currency::format($amountPaid ?? 0, $currency ?? '$') ?></div>
         <?php if (!empty($amountInWords)): ?>
             <div class="amount-words">(<?= esc($amountInWords) ?>)</div>
         <?php endif; ?>
@@ -144,7 +144,7 @@
                 <td class="meta-key">Invoice / Order Ref:</td>
                 <td class="meta-val"><?= esc($invoiceRef ?? 'INV-001') ?></td>
                 <td class="meta-key" style="text-align: right;">Outstanding Balance:</td>
-                <td class="meta-val" style="color: #059669;"><?= esc($currency ?? '$') ?><?= number_format((float) ($balanceRemaining ?? 0.0), 2) ?></td>
+                <td class="meta-val" style="color: #059669;"><?= \Jengo\Pdf\Support\Currency::format($balanceRemaining ?? 0.0, $currency ?? '$') ?></td>
             </tr>
         </table>
     </div>
@@ -165,7 +165,7 @@
             <tr>
                 <td><?= $idx + 1 ?></td>
                 <td><?= esc($item['description'] ?? 'Payment for services') ?></td>
-                <td class="text-right"><?= esc($currency ?? '$') ?><?= number_format((float) ($item['amount'] ?? 0), 2) ?></td>
+                <td class="text-right"><?= \Jengo\Pdf\Support\Currency::format($item['amount'] ?? 0, $currency ?? '$') ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>

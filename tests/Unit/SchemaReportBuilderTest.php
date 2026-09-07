@@ -29,9 +29,12 @@ class SchemaReportBuilderTest extends TestCase
             'align'  => 'right',
             'width'  => '20%',
         ]);
-        $this->assertSame('$ 1,234.56', $currencyCol->formatValue(1234.56));
+        $this->assertSame('$1,234.56', $currencyCol->formatValue(1234.56));
         $this->assertSame('right', $currencyCol->align);
         $this->assertSame('20%', $currencyCol->width);
+
+        $kesCol = Column::make('total_kes', ['format' => 'currency:KES']);
+        $this->assertSame('KES 1,234.56', $kesCol->formatValue(1234.56));
 
         $dateCol = Column::make('created_at', ['format' => 'date:Y/m/d']);
         $this->assertSame('2026/09/05', $dateCol->formatValue('2026-09-05 14:00:00'));
@@ -266,5 +269,24 @@ class SchemaReportBuilderTest extends TestCase
         $report = new SchemaReportBuilder([['id' => 10, 'name' => 'Cyberpunk']]);
         $pdfBinary = $report->theme('cyberpunk')->output();
         $this->assertNotEmpty($pdfBinary);
+    }
+
+    public function testSchemaReportSumAggregationInHtml(): void
+    {
+        $dataset = [
+            ['customer' => 'Alpha', 'amount' => 500.00],
+            ['customer' => 'Beta',  'amount' => 750.00],
+            ['customer' => 'Gamma', 'amount' => 250.00],
+        ];
+
+        $report = Pdf::fromSchema($dataset)
+            ->columns([
+                'customer' => 'Customer',
+                'amount'   => ['label' => 'Amount', 'format' => 'currency:KES', 'sum' => true, 'align' => 'right'],
+            ]);
+
+        $html = $report->toHtml();
+        $this->assertStringContainsString('SUM:', $html);
+        $this->assertStringContainsString('KES 1,500.00', $html);
     }
 }

@@ -132,4 +132,37 @@ class EnumsAndSupportTest extends TestCase
         $rendered = $viewHeader->renderHtml();
         $this->assertStringContainsString('Custom Header', $rendered);
     }
+
+    public function testCurrencySupportClass(): void
+    {
+        // Symbols
+        $this->assertSame('$1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, '$'));
+        $this->assertSame('€1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, '€'));
+        $this->assertSame('£1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, '£'));
+
+        // ISO Currency Codes & Abbreviations
+        $this->assertSame('KES 1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, 'KES'));
+        $this->assertSame('USD 1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, 'USD'));
+        $this->assertSame('EUR 1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, 'EUR'));
+        $this->assertSame('Ksh 1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, 'Ksh'));
+
+        // Sanitizing trailing/leading spaces from input
+        $this->assertSame('KES 1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, 'KES '));
+        $this->assertSame('KES 1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, ' KES '));
+        $this->assertSame('$1,234.56', \Jengo\Pdf\Support\Currency::format(1234.56, ' $ '));
+
+        // Negative numbers
+        $this->assertSame('-$1,234.56', \Jengo\Pdf\Support\Currency::format(-1234.56, '$'));
+        $this->assertSame('-KES 1,234.56', \Jengo\Pdf\Support\Currency::format(-1234.56, 'KES'));
+
+        // Helper function
+        helper('pdf');
+        $this->assertSame('KES 500.00', pdf_currency(500, 'KES'));
+        $this->assertSame('$500.00', pdf_currency(500, '$'));
+
+        // Parsing
+        $this->assertSame(1234.56, \Jengo\Pdf\Support\Currency::parse('KES 1,234.56'));
+        $this->assertSame(1234.56, \Jengo\Pdf\Support\Currency::parse('$1,234.56'));
+        $this->assertSame(-500.0, \Jengo\Pdf\Support\Currency::parse('-KES 500.00'));
+    }
 }

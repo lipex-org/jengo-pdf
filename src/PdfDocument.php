@@ -514,6 +514,10 @@ class PdfDocument implements PdfInterface
             max-height: none !important;
             overflow: visible !important;
         }
+        .jengo-continuous .jengo-sheet-content {
+            height: auto !important;
+            overflow: visible !important;
+        }
         @media print {
             .jengo-preview-toolbar { display: none !important; }
             body { background: transparent !important; }
@@ -557,14 +561,17 @@ class PdfDocument implements PdfInterface
         </div>
     </div>
 
+    <!-- Hidden Persistent Storage of Raw Unmodified Document HTML -->
+    <div id="jengoSourceStorage" style="display: none !important;">{$rawHtml}</div>
+
     <!-- Hidden Calibration Ruler for Exact Physical MM to PX Conversion -->
     <div id="jengoRuler" style="width: 100mm; height: 100mm; position: absolute; visibility: hidden; pointer-events: none;"></div>
 
     <div class="jengo-preview-canvas" id="jengoCanvas">
         <div class="jengo-sheet-container" id="jengoSheetContainer">
-            <!-- Raw Initial Source Sheet -->
-            <div class="jengo-sheet-frame" id="jengoSourceSheet">
-                <div class="jengo-sheet-content" id="jengoSourceContent">
+            <!-- Initial sheet frame -->
+            <div class="jengo-sheet-frame" id="jengo-sheet-1">
+                <div class="jengo-sheet-content">
                     {$rawHtml}
                 </div>
             </div>
@@ -583,9 +590,17 @@ class PdfDocument implements PdfInterface
             return (ruler && ruler.offsetWidth) ? (ruler.offsetWidth / 100) : 3.7795;
         }
 
+        function getSourceContent() {
+            const storage = document.getElementById('jengoSourceStorage');
+            if (storage) {
+                return storage.cloneNode(true);
+            }
+            return null;
+        }
+
         function paginatePreview() {
             const container = document.getElementById('jengoSheetContainer');
-            const sourceContent = document.getElementById('jengoSourceContent');
+            const sourceContent = getSourceContent();
             if (!container || !sourceContent) return;
 
             const isLandscape = {$isLandscapeJs};
@@ -686,17 +701,22 @@ class PdfDocument implements PdfInterface
             } else {
                 // Single page or standard document
                 jengoTotalPagesCount = 1;
-                const sourceFrame = document.getElementById('jengoSourceSheet');
-                if (sourceFrame) {
-                    sourceFrame.id = 'jengo-sheet-1';
-                    let numEl = sourceFrame.querySelector('.jengo-sheet-number');
-                    if (!numEl) {
-                        numEl = document.createElement('div');
-                        numEl.className = 'jengo-sheet-number';
-                        sourceFrame.appendChild(numEl);
-                    }
-                    numEl.innerHTML = 'Page 1 of 1';
-                }
+                container.innerHTML = '';
+                const pageFrame = document.createElement('div');
+                pageFrame.className = 'jengo-sheet-frame';
+                pageFrame.id = 'jengo-sheet-1';
+
+                const pageContent = document.createElement('div');
+                pageContent.className = 'jengo-sheet-content';
+                pageContent.innerHTML = sourceContent.innerHTML;
+                pageFrame.appendChild(pageContent);
+
+                const pageNumberEl = document.createElement('div');
+                pageNumberEl.className = 'jengo-sheet-number';
+                pageNumberEl.innerHTML = 'Page 1 of 1';
+                pageFrame.appendChild(pageNumberEl);
+
+                container.appendChild(pageFrame);
             }
 
             // Update total pages badge on all sheet frames
@@ -790,6 +810,9 @@ class PdfDocument implements PdfInterface
         function jengoToggleViewMode() {
             const canvas = document.getElementById('jengoCanvas');
             jengoIsPaginated = !jengoIsPaginated;
+            const container = document.getElementById('jengoSheetContainer');
+            const storage = document.getElementById('jengoSourceStorage');
+
             if (jengoIsPaginated) {
                 canvas.classList.remove('jengo-continuous');
                 document.getElementById('jengoViewModeBtn').textContent = '📜 Continuous';
@@ -799,9 +822,9 @@ class PdfDocument implements PdfInterface
                 canvas.classList.add('jengo-continuous');
                 document.getElementById('jengoViewModeBtn').textContent = '📑 Paginated';
                 document.getElementById('jengoPageNav').style.display = 'none';
-                const container = document.getElementById('jengoSheetContainer');
-                const src = document.getElementById('jengoSourceContent');
-                container.innerHTML = '<div class="jengo-sheet-frame" id="jengo-sheet-1"><div class="jengo-sheet-content">' + (src ? src.innerHTML : '') + '</div></div>';
+                if (container && storage) {
+                    container.innerHTML = '<div class="jengo-sheet-frame" id="jengo-sheet-1"><div class="jengo-sheet-content">' + storage.innerHTML + '</div></div>';
+                }
             }
         }
 

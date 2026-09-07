@@ -87,3 +87,18 @@ if (!function_exists('pdf_barcode_data_uri')) {
         return Barcode::pngDataUri($code, $height, $width, $color, $bgColor, $showText);
     }
 }
+
+if (!function_exists('pdf_currency')) {
+    /**
+     * Format a monetary amount consistently with currency symbol/code and proper spacing.
+     */
+    function pdf_currency(
+        mixed $amount,
+        ?string $currency = null,
+        ?string $locale = null,
+        int $decimals = 2
+    ): string {
+        return \Jengo\Pdf\Support\Currency::format($amount, $currency, $locale, $decimals);
+    }
+}
+

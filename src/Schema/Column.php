@@ -164,7 +164,7 @@ class Column
                 'datetime' => $value instanceof \DateTimeInterface
                     ? $value->format($param ?: 'Y-m-d H:i')
                     : date($param ?: 'Y-m-d H:i', is_numeric($value) ? (int) $value : strtotime((string) $value)),
-                'currency' => ($param ?: '$') . ' ' . number_format((float) $value, 2),
+                'currency' => \Jengo\Pdf\Support\Currency::format($value, $param ?: '$'),
                 'number' => number_format((float) $value, $param !== null ? (int) $param : 0),
                 'boolean' => $value ? ($param ? explode('|', $param)[0] : 'Yes') : ($param ? explode('|', $param)[1] : 'No'),
                 default => (string) $value,

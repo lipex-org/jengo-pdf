@@ -246,10 +246,21 @@ class SchemaReportBuilder implements SchemaReportInterface
         $results = [];
         foreach ($aggregates as $field => $type) {
             $type = strtolower((string) $type);
-            $values = array_filter(
-                array_map(fn($r) => $r[$field] ?? null, $rows),
-                fn($v) => is_numeric($v)
-            );
+            $values = [];
+            foreach ($rows as $r) {
+                $v = $r[$field] ?? null;
+                if ($v === null) {
+                    continue;
+                }
+                if (is_numeric($v)) {
+                    $values[] = (float) $v;
+                } elseif (is_string($v)) {
+                    $cleaned = preg_replace('/[^\d.-]/', '', str_replace(',', '', $v));
+                    if ($cleaned !== '' && $cleaned !== null && is_numeric($cleaned)) {
+                        $values[] = (float) $cleaned;
+                    }
+                }
+            }
 
             if (empty($values)) {
                 continue;
@@ -270,6 +281,7 @@ class SchemaReportBuilder implements SchemaReportInterface
 
                 $results[$field] = [
                     'label' => strtoupper($type) . ':',
+                    'raw'   => $computed,
                     'value' => $formattedValue,
                 ];
             }

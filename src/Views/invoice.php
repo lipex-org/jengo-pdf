@@ -141,8 +141,8 @@
                     <?php if (!empty($item['desc'])): ?><div class="item-desc"><?= esc($item['desc']) ?></div><?php endif; ?>
                 </td>
                 <td class="text-center"><?= esc($item['qty'] ?? 1) ?></td>
-                <td class="text-right"><?= esc($currency ?? '$') ?><?= number_format((float) ($item['price'] ?? 0), 2) ?></td>
-                <td class="text-right"><?= esc($currency ?? '$') ?><?= number_format($itemTotal, 2) ?></td>
+                <td class="text-right"><?= \Jengo\Pdf\Support\Currency::format($item['price'] ?? 0, $currency ?? '$') ?></td>
+                <td class="text-right"><?= \Jengo\Pdf\Support\Currency::format($itemTotal, $currency ?? '$') ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>
@@ -183,23 +183,23 @@
                 <table class="calculation-table">
                     <tr>
                         <td class="calc-label">Subtotal:</td>
-                        <td class="calc-value"><?= esc($currency ?? '$') ?><?= number_format($subtotal, 2) ?></td>
+                        <td class="calc-value"><?= \Jengo\Pdf\Support\Currency::format($subtotal, $currency ?? '$') ?></td>
                     </tr>
                     <?php if ($discount > 0): ?>
                     <tr>
                         <td class="calc-label">Discount:</td>
-                        <td class="calc-value" style="color: #059669;">-<?= esc($currency ?? '$') ?><?= number_format($discount, 2) ?></td>
+                        <td class="calc-value" style="color: #059669;">-<?= \Jengo\Pdf\Support\Currency::format($discount, $currency ?? '$') ?></td>
                     </tr>
                     <?php endif; ?>
                     <?php if ($taxRate > 0): ?>
                     <tr>
                         <td class="calc-label">Tax (<?= ($taxRate * 100) ?>%):</td>
-                        <td class="calc-value"><?= esc($currency ?? '$') ?><?= number_format($taxAmount, 2) ?></td>
+                        <td class="calc-value"><?= \Jengo\Pdf\Support\Currency::format($taxAmount, $currency ?? '$') ?></td>
                     </tr>
                     <?php endif; ?>
                     <tr class="calc-grand-total">
                         <td class="calc-label grand-total-label">Total:</td>
-                        <td class="calc-value grand-total-value"><?= esc($currency ?? '$') ?><?= number_format($grandTotal, 2) ?></td>
+                        <td class="calc-value grand-total-value"><?= \Jengo\Pdf\Support\Currency::format($grandTotal, $currency ?? '$') ?></td>
                     </tr>
                 </table>
             </td>

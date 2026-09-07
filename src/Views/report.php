@@ -141,7 +141,7 @@
                     <?php foreach ($columns as $index => $col): ?>
                         <td class="text-<?= esc($col->align) ?>">
                             <?php if (isset($aggregates[$col->key])): ?>
-                                <?= esc($aggregates[$col->key]['label'] ?? '') ?> <?= $col->formatValue($aggregates[$col->key]['value'] ?? null) ?>
+                                <?= esc($aggregates[$col->key]['label'] ?? '') ?> <?= $aggregates[$col->key]['value'] ?? '' ?>
                             <?php elseif ($index === 0): ?>
                                 Total Summary
                             <?php endif; ?>

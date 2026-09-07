@@ -158,12 +158,12 @@
                         <?php foreach ($earnings as $item): ?>
                         <tr>
                             <td><?= esc($item['title']) ?></td>
-                            <td style="text-align: right; font-weight: 500;"><?= esc($currency ?? '$') ?><?= number_format((float) $item['amount'], 2) ?></td>
+                            <td style="text-align: right; font-weight: 500;"><?= \Jengo\Pdf\Support\Currency::format($item['amount'], $currency ?? '$') ?></td>
                         </tr>
                         <?php endforeach; ?>
                         <tr class="subtotal-row">
                             <td>Total Gross Earnings</td>
-                            <td style="text-align: right; color: #0284c7;"><?= esc($currency ?? '$') ?><?= number_format($totalEarnings, 2) ?></td>
+                            <td style="text-align: right; color: #0284c7;"><?= \Jengo\Pdf\Support\Currency::format($totalEarnings, $currency ?? '$') ?></td>
                         </tr>
                     </tbody>
                 </table>
@@ -180,12 +180,12 @@
                         <?php foreach ($deductions as $item): ?>
                         <tr>
                             <td><?= esc($item['title']) ?></td>
-                            <td style="text-align: right; font-weight: 500; color: #dc2626;">-<?= esc($currency ?? '$') ?><?= number_format((float) $item['amount'], 2) ?></td>
+                            <td style="text-align: right; font-weight: 500; color: #dc2626;">-<?= \Jengo\Pdf\Support\Currency::format($item['amount'], $currency ?? '$') ?></td>
                         </tr>
                         <?php endforeach; ?>
                         <tr class="subtotal-row">
                             <td>Total Deductions</td>
-                            <td style="text-align: right; color: #dc2626;">-<?= esc($currency ?? '$') ?><?= number_format($totalDeductions, 2) ?></td>
+                            <td style="text-align: right; color: #dc2626;">-<?= \Jengo\Pdf\Support\Currency::format($totalDeductions, $currency ?? '$') ?></td>
                         </tr>
                     </tbody>
                 </table>
@@ -201,7 +201,7 @@
                     <div class="net-sub">Disbursed directly to specified bank account</div>
                 </td>
                 <td class="net-amount">
-                    <?= esc($currency ?? '$') ?><?= number_format($netPay, 2) ?>
+                    <?= \Jengo\Pdf\Support\Currency::format($netPay, $currency ?? '$') ?>
                 </td>
             </tr>
         </table>
