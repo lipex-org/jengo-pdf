@@ -7,7 +7,7 @@ namespace Jengo\Pdf\Support;
 /**
  * Pure-PHP ISO/IEC 18004 compliant QR Code Generator.
  *
- * Generates standards-compliant vector SVG and base64 Data URIs
+ * Generates standards-compliant vector SVG, raster PNG, and base64 Data URIs
  * with full support for finder patterns, separators, timing tracks,
  * alignment patterns, version information, multi-block Reed-Solomon
  * error correction, interleaving, and optimal mask penalty evaluation.
@@ -68,6 +68,108 @@ class QrCode
     ];
 
     /**
+     * Generate an <img> tag with Base64 PNG data for universal Dompdf and browser preview compatibility.
+     */
+    public static function img(
+        string $text,
+        int $size = 120,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        int $margin = 4,
+        string $extraStyle = '',
+        string $alt = 'QR Code'
+    ): string {
+        $uri = self::pngDataUri($text, $size, $color, $bgColor, $margin);
+        return sprintf(
+            '<img src="%s" width="%d" height="%d" alt="%s" style="display:inline-block; vertical-align:middle; %s" />',
+            $uri,
+            $size,
+            $size,
+            htmlspecialchars($alt),
+            $extraStyle
+        );
+    }
+
+    /**
+     * Render QR code as either <img>, SVG, or Data URI.
+     */
+    public static function render(
+        string $text,
+        int $size = 120,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        int $margin = 4,
+        string $format = 'img'
+    ): string {
+        return match (strtolower($format)) {
+            'svg'      => self::svg($text, $size, $color, $bgColor, $margin),
+            'data-uri' => self::pngDataUri($text, $size, $color, $bgColor, $margin),
+            'svg-uri'  => self::svgDataUri($text, $size, $color, $bgColor, $margin),
+            'png'      => self::png($text, $size, $color, $bgColor, $margin),
+            default    => self::img($text, $size, $color, $bgColor, $margin),
+        };
+    }
+
+    /**
+     * Generate a binary PNG image for the QR code (pure PHP, zero dependencies).
+     */
+    public static function png(
+        string $text,
+        int $size = 120,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        int $margin = 4
+    ): string {
+        $matrix = self::generateMatrix($text);
+        $modules = count($matrix);
+        $totalModules = $modules + ($margin * 2);
+
+        // Calculate scale (pixels per module), at least 6px per module for high-DPI raster crispness
+        $scale = max(6, (int) round(($size * 2) / $totalModules));
+        $imgSize = $totalModules * $scale;
+
+        $fg = self::hexToRgb($color);
+        $bg = ($bgColor === 'transparent' || $bgColor === '') ? [255, 255, 255] : self::hexToRgb($bgColor);
+
+        $raw = '';
+        for ($r = 0; $r < $imgSize; $r++) {
+            $raw .= "\x00"; // PNG filter byte 0 (None)
+            $mr = (int) floor($r / $scale) - $margin;
+            for ($c = 0; $c < $imgSize; $c++) {
+                $mc = (int) floor($c / $scale) - $margin;
+                $isDark = ($mr >= 0 && $mr < $modules && $mc >= 0 && $mc < $modules && $matrix[$mr][$mc] === 1);
+                $pixelColor = $isDark ? $fg : $bg;
+                $raw .= chr($pixelColor[0]) . chr($pixelColor[1]) . chr($pixelColor[2]);
+            }
+        }
+
+        $compressed = gzcompress($raw, 6);
+        $ihdrData = pack('NNCCCCC', $imgSize, $imgSize, 8, 2, 0, 0, 0);
+        $ihdr = 'IHDR' . $ihdrData . pack('N', crc32('IHDR' . $ihdrData));
+        $idat = 'IDAT' . $compressed . pack('N', crc32('IDAT' . $compressed));
+        $iend = 'IEND' . pack('N', crc32('IEND'));
+
+        return "\x89PNG\r\n\x1a\n"
+            . pack('N', strlen($ihdrData)) . $ihdr
+            . pack('N', strlen($compressed)) . $idat
+            . pack('N', 0) . $iend;
+    }
+
+    /**
+     * Generate a Base64 PNG Data URI for universal Dompdf and browser rendering.
+     */
+    public static function pngDataUri(
+        string $text,
+        int $size = 120,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        int $margin = 4
+    ): string {
+        $png = self::png($text, $size, $color, $bgColor, $margin);
+        return 'data:image/png;base64,' . base64_encode($png);
+    }
+
+    /**
      * Generate an SVG string representing the QR code.
      */
     public static function svg(
@@ -82,7 +184,7 @@ class QrCode
         $totalSize = $modules + ($margin * 2);
 
         $rects = '';
-        if ($bgColor !== 'transparent') {
+        if ($bgColor !== 'transparent' && $bgColor !== '') {
             $rects .= sprintf('<rect width="%d" height="%d" fill="%s" />', $totalSize, $totalSize, htmlspecialchars($bgColor));
         }
 
@@ -112,7 +214,7 @@ class QrCode
     /**
      * Generate a base64 Data URI for the QR code SVG.
      */
-    public static function dataUri(
+    public static function svgDataUri(
         string $text,
         int $size = 120,
         string $color = '#000000',
@@ -121,6 +223,19 @@ class QrCode
     ): string {
         $svg = self::svg($text, $size, $color, $bgColor, $margin);
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
+    }
+
+    /**
+     * Generate a base64 Data URI for the QR code (defaults to PNG for Dompdf compatibility).
+     */
+    public static function dataUri(
+        string $text,
+        int $size = 120,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        int $margin = 4
+    ): string {
+        return self::pngDataUri($text, $size, $color, $bgColor, $margin);
     }
 
     /**
@@ -233,6 +348,26 @@ class QrCode
         }
 
         return $bestMatrix ?? $matrix;
+    }
+
+    protected static function hexToRgb(string $hex): array
+    {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            return [
+                (int) hexdec($hex[0] . $hex[0]),
+                (int) hexdec($hex[1] . $hex[1]),
+                (int) hexdec($hex[2] . $hex[2]),
+            ];
+        }
+        if (strlen($hex) >= 6) {
+            return [
+                (int) hexdec(substr($hex, 0, 2)),
+                (int) hexdec(substr($hex, 2, 2)),
+                (int) hexdec(substr($hex, 4, 2)),
+            ];
+        }
+        return [0, 0, 0];
     }
 
     protected static function isNearFinder(int $row, int $col, int $size): bool

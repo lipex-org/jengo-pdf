@@ -91,18 +91,29 @@ class DxFeaturesTest extends CIUnitTestCase
     {
         helper('pdf');
 
-        // SVG QR Code
-        $qrSvg = pdf_qr_code('https://jengo.dev/verify/12345', size: 150);
+        // Universal <img> QR Code (Default, for Dompdf & Browser)
+        $qrImg = pdf_qr_code('https://jengo.dev/verify/12345', size: 150);
+        $this->assertStringContainsString('<img', $qrImg);
+        $this->assertStringContainsString('src="data:image/png;base64,', $qrImg);
+        $this->assertStringContainsString('width="150"', $qrImg);
+
+        // SVG QR Code (when format is svg)
+        $qrSvg = pdf_qr_code('https://jengo.dev/verify/12345', size: 150, format: 'svg');
         $this->assertStringContainsString('<svg', $qrSvg);
         $this->assertStringContainsString('width="150"', $qrSvg);
         $this->assertStringContainsString('</svg>', $qrSvg);
 
         // QR Code Data URI
         $qrUri = pdf_qr_data_uri('https://jengo.dev');
-        $this->assertStringStartsWith('data:image/svg+xml;base64,', $qrUri);
+        $this->assertStringStartsWith('data:image/png;base64,', $qrUri);
+
+        // Universal <img> Barcode (Default)
+        $barcodeImg = pdf_barcode('PO-2026-99', height: 40);
+        $this->assertStringContainsString('<img', $barcodeImg);
+        $this->assertStringContainsString('src="data:image/png;base64,', $barcodeImg);
 
         // SVG Barcode Code 128
-        $barcodeSvg = pdf_barcode('PO-2026-99', showText: true);
+        $barcodeSvg = pdf_barcode('PO-2026-99', showText: true, format: 'svg');
         $this->assertStringContainsString('<svg', $barcodeSvg);
         $this->assertStringContainsString('PO-2026-99', $barcodeSvg);
         $this->assertStringContainsString('</svg>', $barcodeSvg);

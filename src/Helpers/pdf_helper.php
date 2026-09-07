@@ -26,44 +26,64 @@ if (!function_exists('pdf')) {
 
 if (!function_exists('pdf_qr_code')) {
     /**
-     * Render an inline vector SVG QR code.
+     * Render a universally compatible QR code (compatible with Dompdf and browser preview).
      */
     function pdf_qr_code(
         string $text,
         int $size = 120,
         string $color = '#000000',
-        string $bgColor = 'transparent',
-        int $margin = 2
+        string $bgColor = '#ffffff',
+        int $margin = 2,
+        string $format = 'img'
     ): string {
-        return QrCode::svg($text, $size, $color, $bgColor, $margin);
+        return QrCode::render($text, $size, $color, $bgColor, $margin, $format);
     }
 }
 
 if (!function_exists('pdf_qr_data_uri')) {
     /**
-     * Render a Base64 SVG Data URI QR code suitable for <img src="...">.
+     * Render a Base64 PNG Data URI QR code suitable for <img src="...">.
      */
     function pdf_qr_data_uri(
         string $text,
         int $size = 120,
         string $color = '#000000',
-        string $bgColor = '#ffffff'
+        string $bgColor = '#ffffff',
+        int $margin = 2
     ): string {
-        return QrCode::dataUri($text, $size, $color, $bgColor);
+        return QrCode::pngDataUri($text, $size, $color, $bgColor, $margin);
     }
 }
 
 if (!function_exists('pdf_barcode')) {
     /**
-     * Render an inline vector SVG Barcode (Code 128 standard).
+     * Render a universally compatible Barcode (Code 128 standard).
      */
     function pdf_barcode(
         string $code,
         int $height = 40,
         int $width = 2,
         string $color = '#000000',
+        string $bgColor = '#ffffff',
+        bool $showText = false,
+        string $format = 'img'
+    ): string {
+        return Barcode::render($code, $height, $width, $color, $bgColor, $showText, $format);
+    }
+}
+
+if (!function_exists('pdf_barcode_data_uri')) {
+    /**
+     * Render a Base64 PNG Data URI Barcode suitable for <img src="...">.
+     */
+    function pdf_barcode_data_uri(
+        string $code,
+        int $height = 40,
+        int $width = 2,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
         bool $showText = false
     ): string {
-        return Barcode::code128($code, $height, $width, $color, $showText);
+        return Barcode::pngDataUri($code, $height, $width, $color, $bgColor, $showText);
     }
 }

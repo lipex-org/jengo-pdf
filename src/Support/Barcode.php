@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace Jengo\Pdf\Support;
 
+/**
+ * Pure-PHP Code 128-B Barcode Generator.
+ *
+ * Generates standards-compliant vector SVG, raster PNG, and base64 Data URIs
+ * for 100% universal compatibility across Dompdf, Chromium, and browser preview.
+ */
 class Barcode
 {
     /**
@@ -26,6 +32,111 @@ class Barcode
     ];
 
     /**
+     * Generate an <img> tag with Base64 PNG data for universal Dompdf and browser compatibility.
+     */
+    public static function img(
+        string $code,
+        int $height = 40,
+        int $width = 2,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        bool $showText = false,
+        string $extraStyle = '',
+        string $alt = 'Barcode'
+    ): string {
+        $uri = self::pngDataUri($code, $height, $width, $color, $bgColor, $showText);
+        $totalHeight = $showText ? $height + 14 : $height;
+        return sprintf(
+            '<img src="%s" height="%d" alt="%s" style="display:inline-block; vertical-align:middle; %s" />',
+            $uri,
+            $totalHeight,
+            htmlspecialchars($alt),
+            $extraStyle
+        );
+    }
+
+    /**
+     * Render Barcode as either <img>, SVG, or Data URI.
+     */
+    public static function render(
+        string $code,
+        int $height = 40,
+        int $width = 2,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        bool $showText = false,
+        string $format = 'img'
+    ): string {
+        return match (strtolower($format)) {
+            'svg'      => self::code128($code, $height, $width, $color, $showText),
+            'data-uri' => self::pngDataUri($code, $height, $width, $color, $bgColor, $showText),
+            'svg-uri'  => self::dataUri($code, $height, $width, $color, $bgColor, $showText),
+            'png'      => self::png($code, $height, $width, $color, $bgColor, $showText),
+            default    => self::img($code, $height, $width, $color, $bgColor, $showText),
+        };
+    }
+
+    /**
+     * Generate a binary PNG image for the Code 128 barcode (pure PHP, zero dependencies).
+     */
+    public static function png(
+        string $code,
+        int $height = 40,
+        int $moduleWidth = 2,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        bool $showText = false
+    ): string {
+        $bars = self::calculateBars($code);
+        $quietModules = 10;
+        $totalModules = count($bars) + ($quietModules * 2);
+
+        $scale = max(3, $moduleWidth * 2);
+        $imgW = $totalModules * $scale;
+        $imgH = max(60, $height * 2);
+
+        $fg = self::hexToRgb($color);
+        $bg = ($bgColor === 'transparent' || $bgColor === '') ? [255, 255, 255] : self::hexToRgb($bgColor);
+
+        $raw = '';
+        for ($y = 0; $y < $imgH; $y++) {
+            $raw .= "\x00"; // Filter byte 0
+            for ($x = 0; $x < $imgW; $x++) {
+                $modIdx = (int) floor($x / $scale) - $quietModules;
+                $isDark = ($modIdx >= 0 && $modIdx < count($bars) && $bars[$modIdx] === 1);
+                $pixelColor = $isDark ? $fg : $bg;
+                $raw .= chr($pixelColor[0]) . chr($pixelColor[1]) . chr($pixelColor[2]);
+            }
+        }
+
+        $compressed = gzcompress($raw, 6);
+        $ihdrData = pack('NNCCCCC', $imgW, $imgH, 8, 2, 0, 0, 0);
+        $ihdr = 'IHDR' . $ihdrData . pack('N', crc32('IHDR' . $ihdrData));
+        $idat = 'IDAT' . $compressed . pack('N', crc32('IDAT' . $compressed));
+        $iend = 'IEND' . pack('N', crc32('IEND'));
+
+        return "\x89PNG\r\n\x1a\n"
+            . pack('N', strlen($ihdrData)) . $ihdr
+            . pack('N', strlen($compressed)) . $idat
+            . pack('N', 0) . $iend;
+    }
+
+    /**
+     * Generate a Base64 PNG Data URI for universal Dompdf and browser rendering.
+     */
+    public static function pngDataUri(
+        string $code,
+        int $height = 40,
+        int $width = 2,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        bool $showText = false
+    ): string {
+        $png = self::png($code, $height, $width, $color, $bgColor, $showText);
+        return 'data:image/png;base64,' . base64_encode($png);
+    }
+
+    /**
      * Generate SVG barcode (Code 128-B standard).
      */
     public static function code128(
@@ -40,8 +151,7 @@ class Barcode
             $code = 'SAMPLE';
         }
 
-        // Code 128B start code is index 104
-        $values = [104];
+        $values = [104]; // Code 128B Start Code
         $checksum = 104;
 
         $length = strlen($code);
@@ -65,10 +175,8 @@ class Barcode
             $bars .= $pattern;
         }
 
-        // Convert widths pattern to rectangles
         $rects = '';
         $x = 10; // Left quiet zone
-        $totalModules = 0;
         $isBar = true;
 
         for ($i = 0; $i < strlen($bars); $i++) {
@@ -77,7 +185,6 @@ class Barcode
                 $rects .= sprintf('<rect x="%d" y="0" width="%d" height="%d" fill="%s" />', $x, $w, $height, htmlspecialchars($color));
             }
             $x += $w;
-            $totalModules += (int) $bars[$i];
             $isBar = !$isBar;
         }
 
@@ -106,5 +213,99 @@ class Barcode
             $rects,
             $textSvg
         );
+    }
+
+    /**
+     * Alias for code128 SVG generator.
+     */
+    public static function svg(
+        string $code,
+        int $height = 40,
+        int $width = 2,
+        string $color = '#000000',
+        bool $showText = false
+    ): string {
+        return self::code128($code, $height, $width, $color, $showText);
+    }
+
+    /**
+     * Generate Base64 Data URI for Barcode (defaults to PNG for Dompdf compatibility).
+     */
+    public static function dataUri(
+        string $code,
+        int $height = 40,
+        int $width = 2,
+        string $color = '#000000',
+        string $bgColor = '#ffffff',
+        bool $showText = false
+    ): string {
+        return self::pngDataUri($code, $height, $width, $color, $bgColor, $showText);
+    }
+
+    /**
+     * Calculate 1D binary bar sequence (1=black, 0=white) for Code 128.
+     *
+     * @return array<int, int>
+     */
+    protected static function calculateBars(string $code): array
+    {
+        $code = trim($code);
+        if ($code === '') {
+            $code = 'SAMPLE';
+        }
+
+        $values = [104];
+        $checksum = 104;
+
+        $length = strlen($code);
+        for ($i = 0; $i < $length; $i++) {
+            $ascii = ord($code[$i]);
+            $val = $ascii - 32;
+            if ($val < 0 || $val > 95) {
+                $val = 0;
+            }
+            $values[] = $val;
+            $checksum += $val * ($i + 1);
+        }
+
+        $values[] = $checksum % 103;
+        $values[] = 106;
+
+        $patternStr = '';
+        foreach ($values as $val) {
+            $patternStr .= self::$code128Patterns[$val] ?? self::$code128Patterns[0];
+        }
+
+        $bars = [];
+        $isBar = true;
+        for ($i = 0; $i < strlen($patternStr); $i++) {
+            $w = (int) $patternStr[$i];
+            for ($k = 0; $k < $w; $k++) {
+                $bars[] = $isBar ? 1 : 0;
+            }
+            $isBar = !$isBar;
+        }
+
+        return $bars;
+    }
+
+    protected static function hexToRgb(string $hex): array
+    {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            return [
+                (int) hexdec($hex[0] . $hex[0]),
+                (int) hexdec($hex[1] . $hex[1]),
+                (int) hexdec($hex[2] . $hex[2]),
+            ];
+        }
+        if (strlen($hex) >= 6) {
+            return [
+                (int) hexdec(substr($hex, 0, 2)),
+                (int) hexdec(substr($hex, 2, 2)),
+                (int) hexdec(substr($hex, 4, 2)),
+            ];
+        }
+        return [0, 0, 0];
     }
 }
