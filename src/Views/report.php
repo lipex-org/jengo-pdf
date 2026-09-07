@@ -20,7 +20,7 @@
             background: #ffffff;
             font-size: 9pt;
             line-height: 1.4;
-            padding: 15px;
+            padding: 10px;
         }
         .header-table {
             width: 100%;

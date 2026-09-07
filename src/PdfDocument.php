@@ -485,7 +485,7 @@ class PdfDocument implements PdfInterface
             max-height: {$heightMm};
             background: #ffffff;
             color: #1e293b;
-            padding: 14mm 16mm 16mm;
+            padding: 3mm 4mm 4mm;
             box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
             border-radius: 4px;
             position: relative;
@@ -504,8 +504,8 @@ class PdfDocument implements PdfInterface
             color: #94a3b8;
             text-align: right;
             border-top: 1px solid #f1f5f9;
-            padding-top: 6px;
-            margin-top: 8px;
+            padding-top: 4px;
+            margin-top: 4px;
             flex-shrink: 0;
         }
         .jengo-continuous .jengo-sheet-frame {
@@ -528,7 +528,7 @@ class PdfDocument implements PdfInterface
                 width: 100% !important;
                 height: 100% !important;
                 margin: 0 !important;
-                padding: 14mm 16mm !important;
+                padding: 3mm 4mm !important;
                 page-break-after: always !important;
                 break-after: page !important;
                 border-radius: 0 !important;
@@ -606,11 +606,11 @@ class PdfDocument implements PdfInterface
             const isLandscape = {$isLandscapeJs};
             const widthMm = isLandscape ? 297 : 210;
             const heightMm = isLandscape ? 210 : 297;
-            const paddingMm = 30; // 14mm top + 16mm bottom
+            const paddingMm = 7; // 3mm top + 4mm bottom
             const ratio = getMmToPxRatio();
 
             const targetPageHeightPx = heightMm * ratio;
-            const printableHeightPx = (heightMm - paddingMm) * ratio - 20; // 20px room for sheet footer
+            const printableHeightPx = (heightMm - paddingMm) * ratio - 14; // 14px room for sheet footer
 
             // Look for table-based documents (e.g. Schema Reports, itemized invoices)
             const allTables = Array.from(sourceContent.querySelectorAll('table'));

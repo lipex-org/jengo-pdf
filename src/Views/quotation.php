@@ -10,7 +10,7 @@
             font-size: 11px;
             color: #1e293b;
             background: #ffffff;
-            padding: 30px;
+            padding: 12px 15px;
             line-height: 1.5;
         }
         .header-table { width: 100%; margin-bottom: 25px; border-collapse: collapse; }
