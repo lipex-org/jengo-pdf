@@ -50,4 +50,30 @@ interface SchemaReportInterface
     public function save(string $destinationPath): string;
 
     public function output(): string;
+
+    /**
+     * Attach filter field definitions for the interactive preview slide-over drawer.
+     *
+     * @param array<\Jengo\Pdf\Filtering\FilterField> $filters
+     */
+    public function withFilters(array $filters): static;
+
+    /**
+     * Register a callback executed when filters are adjusted in the preview or passed via request.
+     *
+     * @param callable $callback function(array $filters, \Jengo\Pdf\PdfDocument $doc): void|array
+     */
+    public function onFilter(callable $callback): static;
+
+    /**
+     * Automatically discover and attach filter controls based on schema columns and data types.
+     */
+    public function withAutoFilters(bool $enabled = true): static;
+
+    /**
+     * Get the registered filter field definitions.
+     *
+     * @return array<\Jengo\Pdf\Filtering\FilterField>
+     */
+    public function getFilters(): array;
 }

@@ -9,6 +9,8 @@ use Jengo\Pdf\Contracts\PdfInterface;
 use Jengo\Pdf\Contracts\SchemaReportInterface;
 use Jengo\Pdf\Enums\Orientation;
 use Jengo\Pdf\Enums\PaperFormat;
+use Jengo\Pdf\Filtering\Filter;
+use Jengo\Pdf\Filtering\FilterField;
 use Jengo\Pdf\Pdf;
 use Jengo\Pdf\PdfDocument;
 
@@ -25,6 +27,14 @@ class SchemaReportBuilder implements SchemaReportInterface
     protected ?string $customTemplate = null;
     protected ?string $filename = null;
     protected string|bool|array|null $watermark = null;
+
+    /** @var array<\Jengo\Pdf\Filtering\FilterField> */
+    protected array $filters = [];
+
+    /** @var callable|null */
+    protected $filterCallback = null;
+
+    protected bool $autoFilters = false;
 
     protected ?PaperFormat $format = PaperFormat::A4;
     protected ?Orientation $orientation = Orientation::PORTRAIT;
@@ -139,6 +149,45 @@ class SchemaReportBuilder implements SchemaReportInterface
         return $this;
     }
 
+    /**
+     * Attach filter field definitions for the interactive preview slide-over drawer.
+     *
+     * @param array<\Jengo\Pdf\Filtering\FilterField> $filters
+     */
+    public function withFilters(array $filters): static
+    {
+        $this->filters = $filters;
+        return $this;
+    }
+
+    /**
+     * Register a callback executed when filters are adjusted in the preview or passed via request.
+     *
+     * @param callable $callback function(array $filters, \Jengo\Pdf\PdfDocument $doc): void|array
+     */
+    public function onFilter(callable $callback): static
+    {
+        $this->filterCallback = $callback;
+        return $this;
+    }
+
+    /**
+     * Automatically discover and attach filter controls based on schema columns and data types.
+     */
+    public function withAutoFilters(bool $enabled = true): static
+    {
+        $this->autoFilters = $enabled;
+        return $this;
+    }
+
+    /**
+     * @return array<\Jengo\Pdf\Filtering\FilterField>
+     */
+    public function getFilters(): array
+    {
+        return $this->filters;
+    }
+
     public function toPdf(): PdfInterface
     {
         $rows = $this->resolveRows();
@@ -176,9 +225,9 @@ class SchemaReportBuilder implements SchemaReportInterface
             'dateFormat'    => $defaults['date_format'] ?? 'Y-m-d H:i:s',
         ];
 
-        $html = $this->renderHtml($data);
+        $reportView = $this->customTemplate ?? $config->templating['views']['report'] ?? $config->views['report'] ?? 'Jengo\Pdf\Views\report';
 
-        $doc = Pdf::html($html)
+        $doc = Pdf::view($reportView, $data)
             ->format($this->format ?? PaperFormat::A4)
             ->orientation($this->orientation ?? Orientation::PORTRAIT);
 
@@ -190,6 +239,16 @@ class SchemaReportBuilder implements SchemaReportInterface
 
         if ($this->filename !== null) {
             $doc->filename($this->filename);
+        }
+
+        $filters = $this->resolveFilters($cols);
+        if (!empty($filters)) {
+            $doc->withFilters($filters);
+        }
+
+        $filterCallback = $this->resolveFilterCallback($rows, $cols);
+        if ($filterCallback !== null) {
+            $doc->onFilter($filterCallback);
         }
 
         return $doc;
@@ -290,7 +349,7 @@ class SchemaReportBuilder implements SchemaReportInterface
      * @param array<string, Column> $columns
      * @return array<string, array{label: string, value: float|int|string}>
      */
-    protected function computeAggregates(array $rows, array $columns = []): array
+    public function computeAggregates(array $rows, array $columns = []): array
     {
         $aggregates = $this->aggregates;
 
@@ -350,6 +409,129 @@ class SchemaReportBuilder implements SchemaReportInterface
         }
 
         return $results;
+    }
+
+    /**
+     * @param array<string, Column> $cols
+     * @return array<\Jengo\Pdf\Filtering\FilterField>
+     */
+    protected function resolveFilters(array $cols): array
+    {
+        $filters = $this->filters;
+
+        if ($this->autoFilters) {
+            $existingKeys = array_map(fn($f) => $f->name, $filters);
+
+            if (!in_array('search', $existingKeys, true)) {
+                $filters[] = Filter::search('search', 'Search')
+                    ->placeholder('Search report...');
+                $existingKeys[] = 'search';
+            }
+
+            foreach ($cols as $colKey => $col) {
+                if ($col instanceof Column) {
+                    if ($col->badgeMap !== null && !in_array($col->key, $existingKeys, true)) {
+                        $opts = array_combine(
+                            array_keys($col->badgeMap),
+                            array_map('ucfirst', array_keys($col->badgeMap))
+                        );
+                        $filters[] = Filter::select($col->key, $col->label, $opts)
+                            ->placeholder('All ' . $col->label);
+                        $existingKeys[] = $col->key;
+                    } elseif (
+                        ($col->format !== null && (str_starts_with($col->format, 'date') || str_starts_with($col->format, 'datetime')))
+                        || in_array($col->key, ['created_at', 'updated_at', 'date', 'order_date', 'invoice_date', 'timestamp'], true)
+                    ) {
+                        $rangeKey = $col->key . '_range';
+                        if (!in_array($rangeKey, $existingKeys, true)) {
+                            $filters[] = Filter::dateRange($rangeKey, $col->label);
+                            $existingKeys[] = $rangeKey;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $filters;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @param array<string, Column> $cols
+     */
+    protected function resolveFilterCallback(array $rows, array $cols): ?callable
+    {
+        if ($this->filterCallback !== null) {
+            return $this->filterCallback;
+        }
+
+        if ($this->autoFilters) {
+            $builder = $this;
+            $allRows = $rows;
+
+            return function (array $filters, PdfDocument $doc) use ($builder, $allRows, $cols): void {
+                $filtered = $allRows;
+
+                if (!empty($filters['search'])) {
+                    $q = mb_strtolower(trim((string) $filters['search']));
+                    $filtered = array_filter($filtered, function ($row) use ($q) {
+                        foreach ($row as $val) {
+                            if (is_scalar($val) && str_contains(mb_strtolower((string) $val), $q)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                }
+
+                foreach ($cols as $colKey => $col) {
+                    $rangeKey = $colKey . '_range';
+                    if (!empty($filters[$rangeKey]) && is_array($filters[$rangeKey])) {
+                        $startStr = $filters[$rangeKey]['from'] ?? $filters[$rangeKey]['start'] ?? null;
+                        $endStr = $filters[$rangeKey]['to'] ?? $filters[$rangeKey]['end'] ?? null;
+                        $start = !empty($startStr) ? strtotime($startStr . ' 00:00:00') : null;
+                        $end = !empty($endStr) ? strtotime($endStr . ' 23:59:59') : null;
+
+                        if ($start !== null || $end !== null) {
+                            $filtered = array_filter($filtered, function ($row) use ($colKey, $start, $end) {
+                                $val = $row[$colKey] ?? null;
+                                if ($val === null) {
+                                    return false;
+                                }
+                                $ts = is_numeric($val) ? (int) $val : strtotime((string) $val);
+                                if ($ts === false) {
+                                    return true;
+                                }
+                                if ($start !== null && $ts < $start) {
+                                    return false;
+                                }
+                                if ($end !== null && $ts > $end) {
+                                    return false;
+                                }
+                                return true;
+                            });
+                        }
+                    }
+
+                    if (isset($filters[$colKey]) && $filters[$colKey] !== '' && $filters[$colKey] !== null) {
+                        $expected = strtolower((string) $filters[$colKey]);
+                        $filtered = array_filter($filtered, function ($row) use ($colKey, $expected) {
+                            return isset($row[$colKey]) && strtolower((string) $row[$colKey]) === $expected;
+                        });
+                    }
+                }
+
+                $filtered = array_values($filtered);
+                $newAggregates = $builder->computeAggregates($filtered, $cols);
+
+                $doc->viewData([
+                    'rows'       => $filtered,
+                    'aggregates' => $newAggregates,
+                ]);
+            };
+        }
+
+        return null;
     }
 
     protected function renderHtml(array $data): string

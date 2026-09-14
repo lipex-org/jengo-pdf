@@ -77,4 +77,32 @@ interface PdfInterface
     public function attachTo(mixed $email, ?string $filename = null, string $disposition = 'attachment'): static;
 
     public function store(string $path, ?string $disk = null): string;
+
+    /**
+     * Attach filter field definitions for the interactive preview slide-over drawer.
+     *
+     * @param array<\Jengo\Pdf\Filtering\FilterField> $filters
+     */
+    public function withFilters(array $filters): static;
+
+    /**
+     * Register a callback executed when filters are adjusted in the preview or passed via request.
+     * The callback receives: function(array $filters, \Jengo\Pdf\PdfDocument $doc): void|array
+     */
+    public function onFilter(callable $callback): static;
+
+    /**
+     * Get the registered filter field definitions.
+     *
+     * @return array<\Jengo\Pdf\Filtering\FilterField>
+     */
+    public function getFilters(): array;
+
+    /**
+     * Execute the filter callback with given filter values against this document.
+     *
+     * @param array<string, mixed> $filters
+     */
+    public function applyFilters(array $filters): static;
 }
+

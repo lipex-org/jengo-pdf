@@ -14,6 +14,7 @@ use Jengo\Pdf\Enums\MediaType;
 use Jengo\Pdf\Enums\Orientation;
 use Jengo\Pdf\Enums\PaperFormat;
 use Jengo\Pdf\Exceptions\DriverException;
+use Jengo\Pdf\Filtering\FilterField;
 use Jengo\Pdf\Support\HeaderFooter;
 use Jengo\Pdf\Support\Margins;
 use Jengo\Pdf\Support\Watermark;
@@ -44,6 +45,16 @@ class PdfDocument implements PdfInterface
     protected string|DriverInterface|null $driver = null;
     protected ?string $filename = null;
     protected ?string $renderedOutput = null;
+
+    /**
+     * @var array<\Jengo\Pdf\Filtering\FilterField>
+     */
+    protected array $filters = [];
+
+    /**
+     * @var callable|null
+     */
+    protected mixed $filterCallback = null;
 
     public function __construct(
         protected ?ConfigPdf $config = null
@@ -90,6 +101,71 @@ class PdfDocument implements PdfInterface
         $this->html = null;
         $this->url = null;
         $this->renderedOutput = null;
+
+        return $this;
+    }
+
+    public function viewData(array $data, bool $merge = true): static
+    {
+        $this->viewData = $merge ? array_merge($this->viewData, $data) : $data;
+        $this->renderedOutput = null;
+
+        return $this;
+    }
+
+    /**
+     * Attach filter field definitions for the interactive preview slide-over drawer.
+     *
+     * @param array<\Jengo\Pdf\Filtering\FilterField> $filters
+     */
+    public function withFilters(array $filters): static
+    {
+        $this->filters = $filters;
+        return $this;
+    }
+
+    /**
+     * Register a callback executed when filters are adjusted in the preview or passed via request.
+     * The callback receives: function(array $filters, \Jengo\Pdf\PdfDocument $doc): void|array
+     */
+    public function onFilter(callable $callback): static
+    {
+        $this->filterCallback = $callback;
+        return $this;
+    }
+
+    /**
+     * Get the registered filter field definitions.
+     *
+     * @return array<\Jengo\Pdf\Filtering\FilterField>
+     */
+    public function getFilters(): array
+    {
+        return $this->filters;
+    }
+
+    /**
+     * Get the registered filter callback.
+     */
+    public function getFilterCallback(): ?callable
+    {
+        return $this->filterCallback;
+    }
+
+    /**
+     * Execute the filter callback with given filter values against this document.
+     *
+     * @param array<string, mixed> $filters
+     */
+    public function applyFilters(array $filters): static
+    {
+        if ($this->filterCallback !== null) {
+            $result = ($this->filterCallback)($filters, $this);
+            if (is_array($result)) {
+                $this->viewData($result);
+            }
+            $this->renderedOutput = null;
+        }
 
         return $this;
     }
@@ -374,6 +450,52 @@ class PdfDocument implements PdfInterface
 
     public function preview(bool $withToolbar = true): ResponseInterface
     {
+        $request = service('request');
+        $isFilterRequest = ($request->getHeaderLine('X-Jengo-Pdf-Filter') === '1')
+            || ($request->getGet('jengo_pdf_filter') === '1')
+            || ($request->getPost('jengo_pdf_filter') === '1');
+
+        if ($isFilterRequest && $this->filterCallback !== null) {
+            $json = $request->getJSON(true);
+            $post = $request->getPost() ?: [];
+            $get = $request->getGet() ?: [];
+
+            $submitted = array_merge($get, $post, is_array($json) ? $json : []);
+            unset($submitted['jengo_pdf_filter']);
+
+            $this->applyFilters($submitted);
+            $newHtml = $this->toHtml();
+
+            /** @var ResponseInterface $response */
+            $response = service('response');
+            return $response->setJSON([
+                'status'      => 'success',
+                'html'        => $newHtml,
+                'format'      => $this->format?->value ?? 'A4',
+                'orientation' => $this->orientation?->value ?? 'portrait',
+                'isLandscape' => $this->orientation?->isLandscape() ?? false,
+                'filters'     => $submitted,
+            ]);
+        }
+
+        // Apply initial filter defaults or active query parameters
+        $initialFilters = [];
+        if (!empty($this->filters)) {
+            foreach ($this->filters as $filter) {
+                if ($filter instanceof FilterField) {
+                    $val = $request->getGet($filter->name);
+                    if ($val !== null) {
+                        $initialFilters[$filter->name] = $val;
+                    } elseif ($filter->default !== null) {
+                        $initialFilters[$filter->name] = $filter->default;
+                    }
+                }
+            }
+            if (!empty($initialFilters)) {
+                $this->applyFilters($initialFilters);
+            }
+        }
+
         if (Pdf::isFaking()) {
             Pdf::getFake()?->record($this, 'preview');
             /** @var ResponseInterface $response */
@@ -395,6 +517,54 @@ class PdfDocument implements PdfInterface
         $isLandscapeJs = $isLandscape ? 'true' : 'false';
         $widthMm = $isLandscape ? '297mm' : '210mm';
         $heightMm = $isLandscape ? '210mm' : '297mm';
+
+        $hasFilters = !empty($this->filters);
+        $filterFieldsHtml = '';
+        if ($hasFilters) {
+            foreach ($this->filters as $filter) {
+                if ($filter instanceof FilterField) {
+                    $currVal = $initialFilters[$filter->name] ?? null;
+                    $filterFieldsHtml .= $filter->renderHtml($currVal);
+                }
+            }
+        }
+
+        $filterButtonHtml = $hasFilters ? '<button onclick="jengoToggleFilters()" class="jengo-btn jengo-btn-secondary" id="jengoFilterToggleBtn" title="Toggle Filters (F)">Filters <span id="jengoFilterBadge" class="jengo-filter-count-badge" style="display: none;">0</span></button>' : '';
+
+        $filterDrawerHtml = $hasFilters ? <<<HTML
+    <!-- Slide-Over Filter Drawer Backdrop -->
+    <div class="jengo-drawer-backdrop" id="jengoDrawerBackdrop" onclick="jengoCloseFilters()"></div>
+
+    <!-- Slide-Over Filter Drawer -->
+    <div class="jengo-filter-drawer" id="jengoFilterDrawer">
+        <div class="jengo-drawer-header">
+            <div>
+                <div style="font-weight: 700; font-size: 14px; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                    <span>Document Filters</span>
+                    <span class="jengo-badge" id="jengoFilterLiveBadge" style="font-size: 10px; color: #10b981; border-color: #065f46;">Live</span>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Changes auto-update the PDF canvas</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button onclick="jengoResetFilters()" class="jengo-btn jengo-btn-secondary" style="padding: 4px 8px; font-size: 11px;">Reset</button>
+                <button onclick="jengoCloseFilters()" class="jengo-drawer-close-btn" title="Close Drawer (Esc)">&times;</button>
+            </div>
+        </div>
+
+        <div class="jengo-drawer-body">
+            <form id="jengoFilterForm" onsubmit="event.preventDefault();">
+                {$filterFieldsHtml}
+            </form>
+        </div>
+
+        <div class="jengo-drawer-footer">
+            <div id="jengoFilterStatus" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px;">
+                <span class="jengo-status-dot"></span> Ready
+            </div>
+            <button onclick="jengoApplyFiltersNow()" class="jengo-btn" style="padding: 6px 12px;">Apply</button>
+        </div>
+    </div>
+HTML : '';
 
         $previewHtml = <<<HTML
 <!DOCTYPE html>
@@ -572,8 +742,184 @@ class PdfDocument implements PdfInterface
             height: auto !important;
             overflow: visible !important;
         }
+
+        /* Slide-Over Filter Drawer Styles */
+        .jengo-drawer-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 99998;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        .jengo-drawer-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .jengo-filter-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 360px;
+            max-width: 90vw;
+            background: #0f172a;
+            border-left: 1px solid #334155;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .jengo-filter-drawer.open {
+            transform: translateX(0);
+        }
+        .jengo-drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid #1e293b;
+            background: #0b1120;
+        }
+        .jengo-drawer-close-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .jengo-drawer-close-btn:hover {
+            background: #1e293b;
+            color: #f1f5f9;
+        }
+        .jengo-drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .jengo-drawer-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            border-top: 1px solid #1e293b;
+            background: #0b1120;
+        }
+        .jengo-filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+        .jengo-filter-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .jengo-filter-input, .jengo-filter-select {
+            width: 100%;
+            padding: 8px 12px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #f1f5f9;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+        .jengo-filter-input:focus, .jengo-filter-select:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+        }
+        .jengo-filter-range-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .jengo-toggle-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+            padding: 4px 0;
+        }
+        .jengo-toggle-input {
+            appearance: none;
+            width: 36px;
+            height: 20px;
+            background: #334155;
+            border-radius: 10px;
+            position: relative;
+            outline: none;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 0;
+        }
+        .jengo-toggle-input:checked {
+            background: #0284c7;
+        }
+        .jengo-toggle-input::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: #ffffff;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .jengo-toggle-input:checked::after {
+            transform: translateX(16px);
+        }
+        .jengo-filter-count-badge {
+            background: #0284c7;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 9999px;
+            margin-left: 4px;
+        }
+        .jengo-btn-active {
+            background: #0284c7 !important;
+            color: #ffffff !important;
+        }
+        .jengo-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            display: inline-block;
+        }
+        .jengo-status-dot.loading {
+            background: #f59e0b;
+            animation: jengoPulse 1s infinite;
+        }
+        @keyframes jengoPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
         @media print {
-            .jengo-preview-toolbar { display: none !important; }
+            .jengo-preview-toolbar, .jengo-drawer-backdrop, .jengo-filter-drawer { display: none !important; }
             body { background: transparent !important; }
             .jengo-preview-canvas { padding: 0 !important; background: transparent !important; gap: 0 !important; }
             .jengo-sheet-container { gap: 0 !important; transform: none !important; }
@@ -597,23 +943,26 @@ class PdfDocument implements PdfInterface
             <div style="font-weight: 800; font-size: 14px; color: #ffffff; display: flex; align-items: center; gap: 6px;">
                 <span style="color: #38bdf8;">Jengo</span>PDF Preview
             </div>
-            <div class="jengo-badge">📄 {$format} &bull; {$orientation}</div>
+            <div class="jengo-badge">{$format} &bull; {$orientation}</div>
             <div class="jengo-page-nav" id="jengoPageNav">
-                <button onclick="jengoPrevPage()" title="Previous Page">▲</button>
+                <button onclick="jengoPrevPage()" title="Previous Page">Prev</button>
                 <span>Page <strong id="jengoCurrentPage">1</strong> of <strong id="jengoTotalPages">1</strong></span>
-                <button onclick="jengoNextPage()" title="Next Page">▼</button>
+                <button onclick="jengoNextPage()" title="Next Page">Next</button>
             </div>
         </div>
         <div class="jengo-toolbar-actions">
-            <button onclick="jengoZoom(-0.1)" class="jengo-btn jengo-btn-secondary" title="Zoom Out">🔍 -</button>
+            {$filterButtonHtml}
+            <button onclick="jengoZoom(-0.1)" class="jengo-btn jengo-btn-secondary" title="Zoom Out">Zoom -</button>
             <button onclick="jengoZoom(0)" class="jengo-btn jengo-btn-secondary" id="jengoZoomLabel">100%</button>
-            <button onclick="jengoZoom(0.1)" class="jengo-btn jengo-btn-secondary" title="Zoom In">🔍 +</button>
-            <button onclick="jengoToggleFit()" class="jengo-btn jengo-btn-secondary" id="jengoFitBtn">⛶ Fit Width</button>
-            <button onclick="jengoToggleViewMode()" class="jengo-btn jengo-btn-secondary" id="jengoViewModeBtn">📜 Continuous</button>
-            <button onclick="window.print()" class="jengo-btn jengo-btn-secondary">🖨️ Print</button>
-            <button onclick="jengoDownloadPdf()" class="jengo-btn jengo-btn-success">⤓ Download PDF</button>
+            <button onclick="jengoZoom(0.1)" class="jengo-btn jengo-btn-secondary" title="Zoom In">Zoom +</button>
+            <button onclick="jengoToggleFit()" class="jengo-btn jengo-btn-secondary" id="jengoFitBtn">Fit Width</button>
+            <button onclick="jengoToggleViewMode()" class="jengo-btn jengo-btn-secondary" id="jengoViewModeBtn">Continuous</button>
+            <button onclick="window.print()" class="jengo-btn jengo-btn-secondary">Print</button>
+            <button onclick="jengoDownloadPdf()" class="jengo-btn jengo-btn-success">Download PDF</button>
         </div>
     </div>
+
+    {$filterDrawerHtml}
 
     <!-- Hidden Persistent Storage of Raw Unmodified Document HTML -->
     <div id="jengoSourceStorage" style="display: none !important;">{$rawHtml}</div>
@@ -638,6 +987,9 @@ class PdfDocument implements PdfInterface
         let jengoIsPaginated = true;
         let jengoTotalPagesCount = 1;
         let jengoActivePage = 1;
+        let jengoDrawerOpen = false;
+        let jengoFilterDebounceTimer = null;
+        let jengoAbortController = null;
 
         function getMmToPxRatio() {
             const ruler = document.getElementById('jengoRuler');
@@ -665,8 +1017,7 @@ class PdfDocument implements PdfInterface
             const paddingMm = 7; // 3mm top + 4mm bottom
             const ratio = getMmToPxRatio();
 
-            const targetPageHeightPx = heightMm * ratio;
-            const printableHeightPx = (heightMm - paddingMm) * ratio - 14; // 14px room for sheet footer
+            const printableHeightPx = (heightMm - paddingMm) * ratio - 14;
 
             // Look for table-based documents (e.g. Schema Reports, itemized invoices)
             const allTables = Array.from(sourceContent.querySelectorAll('table'));
@@ -685,7 +1036,6 @@ class PdfDocument implements PdfInterface
             const tableBody = mainTable ? mainTable.querySelector('tbody') : null;
 
             if (mainTable && tableBody && tableBody.rows.length > 5) {
-                // Multi-row table pagination
                 const tableRows = Array.from(tableBody.rows);
                 const thead = mainTable.querySelector('thead');
                 const tfoot = mainTable.querySelector('tfoot');
@@ -694,8 +1044,7 @@ class PdfDocument implements PdfInterface
                 while (topLevelMainNode.parentElement && topLevelMainNode.parentElement !== sourceContent) {
                     topLevelMainNode = topLevelMainNode.parentElement;
                 }
-                
-                // Elements before table (brand, header, title, subtitle, divider)
+
                 const preElements = [];
                 let curr = sourceContent.firstElementChild;
                 while (curr && curr !== topLevelMainNode) {
@@ -705,7 +1054,6 @@ class PdfDocument implements PdfInterface
                     curr = curr.nextElementSibling;
                 }
 
-                // Elements after table (totals, footer text, powered by)
                 const postElements = [];
                 curr = topLevelMainNode.nextElementSibling;
                 while (curr) {
@@ -731,7 +1079,6 @@ class PdfDocument implements PdfInterface
                     const pageContent = document.createElement('div');
                     pageContent.className = 'jengo-sheet-content';
 
-                    // Add pre-table header on Page 1
                     if (pageIndex === 1) {
                         preElements.forEach(el => pageContent.appendChild(el.cloneNode(true)));
                     }
@@ -746,7 +1093,6 @@ class PdfDocument implements PdfInterface
                     pageContent.appendChild(pageTable);
                     pageFrame.appendChild(pageContent);
 
-                    // Add sheet number footer placeholder
                     const pageNumberEl = document.createElement('div');
                     pageNumberEl.className = 'jengo-sheet-number';
                     pageNumberEl.innerHTML = 'Page ' + pageIndex;
@@ -754,12 +1100,10 @@ class PdfDocument implements PdfInterface
 
                     container.appendChild(pageFrame);
 
-                    // Append rows until printable height is reached
                     while (currentRowIndex < tableRows.length) {
                         const rowClone = tableRows[currentRowIndex].cloneNode(true);
                         pageTbody.appendChild(rowClone);
 
-                        // Check if overflowed
                         if (pageContent.scrollHeight > printableHeightPx && pageTbody.rows.length > 1) {
                             pageTbody.removeChild(rowClone);
                             break;
@@ -767,7 +1111,6 @@ class PdfDocument implements PdfInterface
                         currentRowIndex++;
                     }
 
-                    // If last batch of rows, append tfoot and postElements
                     if (currentRowIndex >= tableRows.length) {
                         if (tfoot) {
                             pageTable.appendChild(tfoot.cloneNode(true));
@@ -780,7 +1123,6 @@ class PdfDocument implements PdfInterface
 
                 jengoTotalPagesCount = pageIndex - 1;
             } else {
-                // Single page or standard document
                 jengoTotalPagesCount = 1;
                 container.innerHTML = '';
                 const pageFrame = document.createElement('div');
@@ -807,7 +1149,6 @@ class PdfDocument implements PdfInterface
                 container.appendChild(pageFrame);
             }
 
-            // Update total pages badge on all sheet frames
             const allSheets = container.querySelectorAll('.jengo-sheet-frame');
             allSheets.forEach((sheet, idx) => {
                 const numEl = sheet.querySelector('.jengo-sheet-number');
@@ -903,12 +1244,12 @@ class PdfDocument implements PdfInterface
 
             if (jengoIsPaginated) {
                 canvas.classList.remove('jengo-continuous');
-                document.getElementById('jengoViewModeBtn').textContent = '📜 Continuous';
+                document.getElementById('jengoViewModeBtn').textContent = 'Continuous';
                 document.getElementById('jengoPageNav').style.display = 'inline-flex';
                 paginatePreview();
             } else {
                 canvas.classList.add('jengo-continuous');
-                document.getElementById('jengoViewModeBtn').textContent = '📑 Paginated';
+                document.getElementById('jengoViewModeBtn').textContent = 'Paginated';
                 document.getElementById('jengoPageNav').style.display = 'none';
                 if (container && storage) {
                     const clonedStorage = storage.cloneNode(true);
@@ -923,27 +1264,217 @@ class PdfDocument implements PdfInterface
             }
         }
 
+        function jengoToggleFilters() {
+            if (jengoDrawerOpen) {
+                jengoCloseFilters();
+            } else {
+                jengoOpenFilters();
+            }
+        }
+
+        function jengoOpenFilters() {
+            const drawer = document.getElementById('jengoFilterDrawer');
+            const backdrop = document.getElementById('jengoDrawerBackdrop');
+            if (drawer && backdrop) {
+                drawer.classList.add('open');
+                backdrop.classList.add('active');
+                jengoDrawerOpen = true;
+                const firstInput = drawer.querySelector('input, select');
+                if (firstInput) firstInput.focus();
+            }
+        }
+
+        function jengoCloseFilters() {
+            const drawer = document.getElementById('jengoFilterDrawer');
+            const backdrop = document.getElementById('jengoDrawerBackdrop');
+            if (drawer && backdrop) {
+                drawer.classList.remove('open');
+                backdrop.classList.remove('active');
+                jengoDrawerOpen = false;
+            }
+        }
+
+        function jengoGetFilterFormData() {
+            const form = document.getElementById('jengoFilterForm');
+            if (!form) return {};
+            const formData = new FormData(form);
+            const data = {};
+
+            for (const [key, val] of formData.entries()) {
+                if (key.includes('[') && key.endsWith(']')) {
+                    const parts = key.split('[');
+                    const rootKey = parts[0];
+                    const subKey = parts[1].replace(']', '');
+                    if (!data[rootKey]) data[rootKey] = {};
+                    data[rootKey][subKey] = val;
+                } else {
+                    data[key] = val;
+                }
+            }
+
+            const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                if (!cb.checked && !data[cb.name]) {
+                    data[cb.name] = 0;
+                }
+            });
+
+            return data;
+        }
+
+        function jengoUpdateFilterBadge() {
+            const data = jengoGetFilterFormData();
+            let count = 0;
+            for (const k in data) {
+                const v = data[k];
+                if (typeof v === 'object' && v !== null) {
+                    if (Object.values(v).some(x => x !== '')) count++;
+                } else if (v !== '' && v !== '0' && v !== 0 && v !== false && v !== null && v !== 'all') {
+                    count++;
+                }
+            }
+            const badge = document.getElementById('jengoFilterBadge');
+            const toggleBtn = document.getElementById('jengoFilterToggleBtn');
+            if (badge) {
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.style.display = 'inline-block';
+                    if (toggleBtn) toggleBtn.classList.add('jengo-btn-active');
+                } else {
+                    badge.style.display = 'none';
+                    if (toggleBtn) toggleBtn.classList.remove('jengo-btn-active');
+                }
+            }
+        }
+
+        function jengoDebounceFilterChange() {
+            jengoUpdateFilterBadge();
+            clearTimeout(jengoFilterDebounceTimer);
+            jengoSetStatus('Updating preview...', true);
+
+            jengoFilterDebounceTimer = setTimeout(() => {
+                jengoApplyFiltersNow();
+            }, 300);
+        }
+
+        function jengoSetStatus(text, isLoading = false) {
+            const statusEl = document.getElementById('jengoFilterStatus');
+            if (statusEl) {
+                statusEl.innerHTML = '<span class="jengo-status-dot ' + (isLoading ? 'loading' : '') + '"></span> ' + text;
+            }
+        }
+
+        function jengoApplyFiltersNow() {
+            const filterData = jengoGetFilterFormData();
+            if (jengoAbortController) {
+                jengoAbortController.abort();
+            }
+            jengoAbortController = new AbortController();
+
+            jengoSetStatus('Updating canvas...', true);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Jengo-Pdf-Filter': '1',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(filterData),
+                signal: jengoAbortController.signal
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP error ' + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if (data.status === 'success' && data.html) {
+                    const storage = document.getElementById('jengoSourceStorage');
+                    if (storage) {
+                        storage.innerHTML = data.html;
+                        paginatePreview();
+                    }
+                    jengoSetStatus('Ready', false);
+                    jengoSyncUrl(filterData);
+                }
+            })
+            .catch(err => {
+                if (err.name !== 'AbortError') {
+                    jengoSetStatus('Error updating preview', false);
+                }
+            });
+        }
+
+        function jengoResetFilters() {
+            const form = document.getElementById('jengoFilterForm');
+            if (form) {
+                form.reset();
+                jengoDebounceFilterChange();
+            }
+        }
+
+        function jengoSyncUrl(filters) {
+            try {
+                const url = new URL(window.location.href);
+                for (const [k, v] of Object.entries(filters)) {
+                    if (typeof v === 'object' && v !== null) {
+                        for (const [subK, subV] of Object.entries(v)) {
+                            if (subV !== '') {
+                                url.searchParams.set(k + '[' + subK + ']', subV);
+                            } else {
+                                url.searchParams.delete(k + '[' + subK + ']');
+                            }
+                        }
+                    } else if (v !== '' && v !== null && v !== undefined) {
+                        url.searchParams.set(k, v);
+                    } else {
+                        url.searchParams.delete(k);
+                    }
+                }
+                window.history.replaceState(null, '', url.toString());
+            } catch (e) {}
+        }
+
         function jengoDownloadPdf() {
             let currentUrl = window.location.href;
+            let downloadUrl;
             if (currentUrl.includes('/preview')) {
-                window.location.href = currentUrl.replace('/preview', '/download');
+                downloadUrl = currentUrl.replace('/preview', '/download');
             } else if (currentUrl.includes('action=preview')) {
-                window.location.href = currentUrl.replace('action=preview', 'action=download');
+                downloadUrl = currentUrl.replace('action=preview', 'action=download');
             } else {
                 const url = new URL(currentUrl);
                 url.searchParams.set('action', 'download');
-                window.location.href = url.toString();
+                downloadUrl = url.toString();
             }
+            window.location.href = downloadUrl;
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             paginatePreview();
             window.addEventListener('scroll', updateActivePageOnScroll, { passive: true });
+
+            const form = document.getElementById('jengoFilterForm');
+            if (form) {
+                form.addEventListener('input', jengoDebounceFilterChange);
+                form.addEventListener('change', jengoDebounceFilterChange);
+                jengoUpdateFilterBadge();
+            }
         });
 
         window.addEventListener('keydown', (e) => {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                if (e.key === 'Escape') {
+                    jengoCloseFilters();
+                }
+                return;
+            }
+            if (e.key === 'Escape') {
+                jengoCloseFilters();
+            } else if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                jengoToggleFilters();
+            } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
                 jengoPrevPage();
             } else if (e.key === 'ArrowDown' || e.key === 'PageDown') {
                 jengoNextPage();
@@ -1002,6 +1533,19 @@ HTML;
             $filename .= '.pdf';
         }
 
+        if ($this->filterCallback !== null) {
+            $req = service('request');
+            $activeFilters = [];
+            foreach ($this->filters as $f) {
+                if ($f instanceof FilterField && ($v = $req->getGet($f->name)) !== null) {
+                    $activeFilters[$f->name] = $v;
+                }
+            }
+            if (!empty($activeFilters)) {
+                $this->applyFilters($activeFilters);
+            }
+        }
+
         if (Pdf::isFaking()) {
             Pdf::getFake()?->record($this, 'inline', filename: $filename);
             /** @var ResponseInterface $response */
@@ -1031,6 +1575,19 @@ HTML;
         $filename = $filename ?? $this->filename ?? 'document.pdf';
         if (!str_ends_with(strtolower($filename), '.pdf')) {
             $filename .= '.pdf';
+        }
+
+        if ($this->filterCallback !== null) {
+            $req = service('request');
+            $activeFilters = [];
+            foreach ($this->filters as $f) {
+                if ($f instanceof FilterField && ($v = $req->getGet($f->name)) !== null) {
+                    $activeFilters[$f->name] = $v;
+                }
+            }
+            if (!empty($activeFilters)) {
+                $this->applyFilters($activeFilters);
+            }
         }
 
         if (Pdf::isFaking()) {

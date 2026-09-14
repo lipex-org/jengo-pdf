@@ -279,4 +279,28 @@ abstract class AbstractDocumentBuilder implements PdfInterface
     {
         return $this->prepareDocument()->store($path, $disk);
     }
+
+    public function withFilters(array $filters): static
+    {
+        $this->document->withFilters($filters);
+        return $this;
+    }
+
+    public function onFilter(callable $callback): static
+    {
+        $this->document->onFilter($callback);
+        return $this;
+    }
+
+    public function getFilters(): array
+    {
+        return $this->document->getFilters();
+    }
+
+    public function applyFilters(array $filters): static
+    {
+        $this->document->applyFilters($filters);
+        return $this;
+    }
 }
+
