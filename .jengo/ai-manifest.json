@@ -1,7 +1,7 @@
 {
   "name": "jengo/pdf",
   "description": "High-performance dual-driver PDF generation, document templating, schema reporting, and interactive browser preview engine for CodeIgniter 4 and the Jengo Framework.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "facade": {
     "class": "Jengo\\Pdf\\Pdf",
     "description": "Primary static entry point providing fluent document builders, schema report builders, direct HTML/View/URL renderers, testing fakes, and theme registration."
@@ -79,6 +79,11 @@
         "format(callable $formatter)"
       ]
     },
+    "interactive_filtering": {
+      "auto_filters": "$report->withAutoFilters(bool $enabled = true): self (Automatically inspects schema columns and infers smart filter controls: search for text, select for badges, dateRange for dates, numberRange for currency/numbers)",
+      "manual_filters": "$report->withFilters(array $filters): self (Registers explicit FilterField controls for custom report slicing)",
+      "filter_callback": "$report->onFilter(callable $callback): self (Registers a callback receiving ($doc, array $filterValues): PdfDocument to dynamically regenerate or adapt the report)"
+    },
     "themes": {
       "class": "Jengo\\Pdf\\Schema\\ReportTheme",
       "presets": [
@@ -102,9 +107,74 @@
       ]
     }
   },
+  "interactive_filtering": {
+    "filter_factory": "Jengo\\Pdf\\Filtering\\Filter",
+    "filter_field": "Jengo\\Pdf\\Filtering\\FilterField",
+    "filter_type": "Jengo\\Pdf\\Filtering\\FilterType",
+    "alias": "Jengo\\Pdf\\Support\\Filter",
+    "description": "Fluent filter definition engine allowing developers to expose interactive filter controls in the browser preview slide-over drawer with real-time debounced AJAX background updates, URL synchronization, and PDF download parity.",
+    "factory_methods": [
+      {
+        "method": "Filter::text(string $name, ?string $label = null): FilterField",
+        "description": "Single-line text input filter field."
+      },
+      {
+        "method": "Filter::search(string $name = 'search', ?string $label = null): FilterField",
+        "description": "Search input filter field with clear button and debounced query execution."
+      },
+      {
+        "method": "Filter::date(string $name, ?string $label = null): FilterField",
+        "description": "HTML5 date picker filter field."
+      },
+      {
+        "method": "Filter::dateRange(string $name = 'date_range', ?string $label = null): FilterField",
+        "description": "Date range picker with start and end date controls."
+      },
+      {
+        "method": "Filter::select(string $name, array $options = [], ?string $label = null): FilterField",
+        "description": "Dropdown select filter with key-value options, supporting optional multiple selections."
+      },
+      {
+        "method": "Filter::toggle(string $name, ?string $label = null, bool $default = false): FilterField",
+        "description": "Boolean checkbox / switch toggle control."
+      },
+      {
+        "method": "Filter::numberRange(string $name, ?string $label = null, float $min = 0, float $max = 1000000, float $step = 1): FilterField",
+        "description": "Numeric min-max dual range filter with step increment support."
+      }
+    ],
+    "field_configuration_methods": [
+      "placeholder(string $placeholder): self",
+      "default(mixed $default): self",
+      "options(array $options): self",
+      "multiple(bool $multiple = true): self",
+      "min(float $min): self",
+      "max(float $max): self",
+      "step(float $step): self",
+      "help(string $text): self",
+      "toArray(): array"
+    ],
+    "document_integration": {
+      "withFilters": "$doc->withFilters(array $filters): self (Registers interactive filter definitions on any PdfDocument or SchemaReportBuilder instance)",
+      "onFilter": "$doc->onFilter(callable $callback): self (Registers dynamic callback receiving ($doc, array $filterValues): PdfDocument to adapt the document in real time)",
+      "getFilters": "$doc->getFilters(): array (Retrieves registered FilterField definitions)",
+      "applyFilters": "$doc->applyFilters(array $filterValues): self (Executes onFilter callback with current filter values, returning the adapted document)"
+    },
+    "schema_auto_filters": {
+      "method": "$report->withAutoFilters(bool $enabled = true): self",
+      "description": "Automatically inspects schema report columns to generate smart filters (search for searchable/text columns, select for badge/categorical columns, dateRange for date columns, numberRange for currency/numeric columns)."
+    },
+    "ui_interaction": {
+      "drawer": "Slide-over filter drawer with dark/light mode parity, backdrop blur, reset controls, and live active filter indicator badges.",
+      "shortcuts": "Press 'F' or 'f' to toggle the filter drawer; press 'Esc' to close.",
+      "live_updates": "Changes trigger 300ms debounced AJAX POST/GET requests to update the canvas without full-page reloads.",
+      "url_sync": "Active filter parameters are synchronized to the browser URL search params for bookmarking and sharing.",
+      "download_parity": "Download and Print buttons forward current active filter parameters to ensure exported PDFs match the preview state."
+    }
+  },
   "browser_preview": {
     "method": "$doc->preview(bool $withToolbar = true): ResponseInterface",
-    "description": "Renders an interactive in-browser canvas with dark-mode toolbar, paper format badge, page counter, live zoom, fit-to-width, continuous vs paginated view toggles, keyboard shortcuts, and print/download triggers.",
+    "description": "Renders an interactive in-browser canvas with dark-mode toolbar, paper format badge, page counter, live zoom, fit-to-width, continuous vs paginated view toggles, slide-over interactive filter drawer (keyboard shortcuts: 'F' / 'f' to toggle, 'Esc' to close), debounced AJAX background re-rendering, URL synchronization, and print/download triggers.",
     "pagination_engine": "Automatic client-side DOM table splitting across physical millimeter sheet frames with repeating table headers, pre-table branding, summaries, footers, and watermarks."
   },
   "support_utilities": [
