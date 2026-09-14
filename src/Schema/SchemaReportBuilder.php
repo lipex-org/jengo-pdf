@@ -369,7 +369,7 @@ class SchemaReportBuilder implements SchemaReportInterface
             $type = strtolower((string) $type);
             $values = [];
             foreach ($rows as $r) {
-                $v = $r[$field] ?? null;
+                $v = is_array($r) ? ($r[$field] ?? null) : ($r->{$field} ?? null);
                 if ($v === null) {
                     continue;
                 }

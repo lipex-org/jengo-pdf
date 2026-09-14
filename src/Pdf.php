@@ -170,4 +170,16 @@ class Pdf
     {
         return new PdfDocument();
     }
+
+    /**
+     * Dynamically proxy static calls to the fake testing double when active.
+     */
+    public static function __callStatic(string $name, array $arguments): mixed
+    {
+        if (static::$fakeInstance !== null && method_exists(static::$fakeInstance, $name)) {
+            return static::$fakeInstance->{$name}(...$arguments);
+        }
+
+        throw new \BadMethodCallException("Method " . static::class . "::{$name}() does not exist.");
+    }
 }
