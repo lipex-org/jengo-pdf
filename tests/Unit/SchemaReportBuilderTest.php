@@ -314,4 +314,63 @@ class SchemaReportBuilderTest extends TestCase
         $this->assertStringContainsString('CONFIDENTIAL — For Board Review Only', $html);
         $this->assertStringContainsString('Official Schema Report', $html);
     }
+
+    public function testSchemaReportBuilderWithJengoQueryResult(): void
+    {
+        $jengoQueryMock = new class {
+            public function get(): object
+            {
+                $result = new \stdClass();
+                $result->data = [
+                    ['product' => 'Laptop', 'price' => 1200.50, 'quantity' => 2],
+                    ['product' => 'Monitor', 'price' => 350.00, 'quantity' => 5],
+                ];
+                return $result;
+            }
+        };
+
+        $builder = new SchemaReportBuilder($jengoQueryMock);
+        $builder->columns([
+            'product'  => 'Product',
+            'price'    => ['label' => 'Price', 'format' => 'currency:$'],
+            'quantity' => 'Quantity',
+        ])->aggregate([
+            'price'    => 'sum',
+            'quantity' => 'avg',
+        ]);
+
+        $html = $builder->toHtml();
+        $this->assertStringContainsString('Laptop', $html);
+        $this->assertStringContainsString('Monitor', $html);
+        $this->assertStringContainsString('$1,550.50', $html);
+
+        $pdf = $builder->output();
+        $this->assertNotEmpty($pdf);
+        $this->assertStringStartsWith('%PDF', $pdf);
+    }
+
+    public function testSchemaReportBuilderEdgeCaseAggregates(): void
+    {
+        $dataset = [
+            ['item' => 'A', 'amount' => -100.0, 'notes' => null],
+            ['item' => 'B', 'amount' => 300.0, 'notes' => 'Active'],
+            ['item' => 'C', 'amount' => null, 'notes' => 'Pending'],
+        ];
+
+        $report = new SchemaReportBuilder($dataset);
+        $report->columns([
+            'item'   => 'Item',
+            'amount' => ['label' => 'Amount', 'format' => 'currency:$'],
+            'notes'  => 'Notes',
+        ])->aggregate([
+            'amount' => 'sum',
+            'notes'  => 'count',
+        ]);
+
+        $html = $report->toHtml();
+        // Sum should be -100 + 300 + 0 = 200
+        $this->assertStringContainsString('$200.00', $html);
+        // Count of notes should be 2 (since null note in item A is skipped in count)
+        $this->assertStringContainsString('2', $html);
+    }
 }

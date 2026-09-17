@@ -298,8 +298,23 @@ class SchemaReportBuilder implements SchemaReportInterface
                 return array_map(fn($item) => (array) $item, is_array($results) ? $results : []);
             }
 
-            if (method_exists($this->schemaOrQuery, 'get') && method_exists($this->schemaOrQuery, 'getResultArray')) {
-                return $this->schemaOrQuery->get()->getResultArray();
+            if (method_exists($this->schemaOrQuery, 'get')) {
+                $res = $this->schemaOrQuery->get();
+                if (is_object($res)) {
+                    if (method_exists($res, 'getResultArray')) {
+                        return $res->getResultArray();
+                    }
+                    if (isset($res->data) && is_array($res->data)) {
+                        return array_map(fn($item) => (array) $item, $res->data);
+                    }
+                }
+                if (is_array($res)) {
+                    return array_map(fn($item) => (array) $item, $res);
+                }
+            }
+
+            if (method_exists($this->schemaOrQuery, 'getResultArray')) {
+                return $this->schemaOrQuery->getResultArray();
             }
 
             if (method_exists($this->schemaOrQuery, 'toArray')) {
