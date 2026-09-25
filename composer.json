@@ -10,31 +10,11 @@
     }
   ],
   "require": {
-    "php": "^8.2",
-    "codeigniter4/framework": "^4.6|^4.7",
-    "jengo/base": "^1.1 || dev-main",
+    "php": "^8.5",
+    "codeigniter4/framework": "^4.7",
+    "jengo/base": "^1.1",
     "dompdf/dompdf": "^3.0"
   },
-  "repositories": [
-    {
-      "type": "path",
-      "url": "../base",
-      "options": {
-        "versions": {
-          "jengo/base": "1.1.99"
-        }
-      }
-    },
-    {
-      "type": "path",
-      "url": "../schema",
-      "options": {
-        "versions": {
-          "jengo/schema": "1.0.99"
-        }
-      }
-    }
-  ],
   "suggest": {
     "jengo/schema": "Required for building automatic PDF reports directly from database schema models"
   },
