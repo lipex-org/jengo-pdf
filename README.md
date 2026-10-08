@@ -1,8 +1,22 @@
-# Jengo PDF
+<p align="center">
+  <a href="https://lipex-org.github.io/jengophp.com/">
+    <img src="https://raw.githubusercontent.com/lipex-org/docs/main/public/logo-full.png" width="220" alt="Jengo Logo">
+  </a>
+</p>
 
-A high-performance, dual-driver PDF generation, document templating, database schema reporting, and interactive browser preview engine for CodeIgniter 4 and the Jengo Framework.
+<h1 align="center">Jengo PDF</h1>
 
-Documentation: https://lipex-org.github.io/jengophp.com/packages/pdf
+<p align="center">
+  <strong>High-performance PDF builder and document generator (Dompdf & Chromium) with pre-built invoice templates, schema reports, and interactive browser preview.</strong>
+</p>
+
+<p align="center">
+  <a href="https://lipex-org.github.io/jengophp.com/packages/pdf"><strong>Documentation</strong></a> •
+  <a href="https://github.com/lipex-org/pdf/blob/main/LICENSE"><strong>License</strong></a> •
+  <a href="https://github.com/lipex-org/pdf/issues"><strong>Issues</strong></a>
+</p>
+
+---
 
 ## Installation
 
