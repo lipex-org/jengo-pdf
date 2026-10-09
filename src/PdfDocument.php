@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Jengo\Pdf;
 
 use CodeIgniter\HTTP\ResponseInterface;
+use Jengo\Base\Container\Traits\HasContainer;
 use Jengo\Pdf\Config\Pdf as ConfigPdf;
 use Jengo\Pdf\Contracts\DriverInterface;
 use Jengo\Pdf\Contracts\PdfInterface;
@@ -15,13 +16,17 @@ use Jengo\Pdf\Enums\Orientation;
 use Jengo\Pdf\Enums\PaperFormat;
 use Jengo\Pdf\Exceptions\DriverException;
 use Jengo\Pdf\Filtering\FilterField;
+use Jengo\Pdf\Jobs\RenderPdfJob;
 use Jengo\Pdf\Support\HeaderFooter;
 use Jengo\Pdf\Support\Margins;
 use Jengo\Pdf\Support\Watermark;
+use Jengo\Queues\Facades\Queue;
 use Throwable;
 
 class PdfDocument implements PdfInterface
 {
+    use HasContainer;
+
     protected ?string $html = null;
     protected ?string $view = null;
     protected array $viewData = [];
@@ -47,7 +52,7 @@ class PdfDocument implements PdfInterface
     protected ?string $renderedOutput = null;
 
     /**
-     * @var array<\Jengo\Pdf\Filtering\FilterField>
+     * @var array<FilterField>
      */
     protected array $filters = [];
 
@@ -116,7 +121,7 @@ class PdfDocument implements PdfInterface
     /**
      * Attach filter field definitions for the interactive preview slide-over drawer.
      *
-     * @param array<\Jengo\Pdf\Filtering\FilterField> $filters
+     * @param array<FilterField> $filters
      */
     public function withFilters(array $filters): static
     {
@@ -137,7 +142,7 @@ class PdfDocument implements PdfInterface
     /**
      * Get the registered filter field definitions.
      *
-     * @return array<\Jengo\Pdf\Filtering\FilterField>
+     * @return array<FilterField>
      */
     public function getFilters(): array
     {
@@ -160,7 +165,18 @@ class PdfDocument implements PdfInterface
     public function applyFilters(array $filters): static
     {
         if ($this->filterCallback !== null) {
-            $result = ($this->filterCallback)($filters, $this);
+            try {
+                $result = $this->call($this->filterCallback, [
+                    'filters'   => $filters,
+                    'submitted' => $filters,
+                    'doc'       => $this,
+                    'document'  => $this,
+                    'd'         => $this,
+                ]);
+            } catch (\Throwable) {
+                $result = ($this->filterCallback)($filters, $this);
+            }
+
             if (is_array($result)) {
                 $this->viewData($result);
             }
@@ -377,6 +393,16 @@ class PdfDocument implements PdfInterface
         }
 
         $driverName = is_string($this->driver) ? strtolower($this->driver) : 'dompdf';
+        $customDrivers = Pdf::getCustomDrivers();
+
+        if (isset($customDrivers[$driverName])) {
+            $creator = $customDrivers[$driverName];
+            $driver = $this->call($creator, ['config' => $this->config, 'document' => $this]);
+            if ($driver instanceof DriverInterface) {
+                return $driver;
+            }
+            throw new DriverException("Custom driver [{$driverName}] did not return an instance of DriverInterface.");
+        }
 
         return match ($driverName) {
             'dompdf'   => new DompdfDriver($this->config->dompdf ?? []),
@@ -1663,6 +1689,41 @@ HTML;
             : $path;
 
         return $this->save($fullPath);
+    }
+
+    /**
+     * Dispatch PDF rendering and saving to a background queue.
+     */
+    public function storeAsync(string $path, ?string $disk = null): string|int
+    {
+        if (Pdf::isFaking()) {
+            Pdf::getFake()?->record($this, 'storeAsync', destination: $path);
+            return 'fake-job-id';
+        }
+
+        $documentOptions = [
+            'format'      => $this->format?->value ?? 'A4',
+            'orientation' => $this->orientation?->value ?? 'portrait',
+            'scale'       => $this->scale,
+            'driver'      => is_string($this->driver) ? $this->driver : 'dompdf',
+        ];
+
+        if ($this->watermark !== null) {
+            $documentOptions['watermark'] = $this->watermark;
+        }
+
+        $job = new RenderPdfJob(
+            destinationPath: $path,
+            disk: $disk,
+            html: $this->html,
+            view: $this->view,
+            viewData: $this->viewData,
+            templateName: $this->templateName,
+            url: $this->url,
+            documentOptions: $documentOptions
+        );
+
+        return Queue::push($job);
     }
 
     // Getters for Drivers

@@ -280,6 +280,11 @@ abstract class AbstractDocumentBuilder implements PdfInterface
         return $this->prepareDocument()->store($path, $disk);
     }
 
+    public function storeAsync(string $path, ?string $disk = null): string|int
+    {
+        return $this->prepareDocument()->storeAsync($path, $disk);
+    }
+
     public function withFilters(array $filters): static
     {
         $this->document->withFilters($filters);

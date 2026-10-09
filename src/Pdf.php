@@ -20,7 +20,34 @@ use Jengo\Pdf\Testing\PdfFake;
 
 class Pdf
 {
+    use \Jengo\Base\Container\Traits\HasContainer;
+
     protected static ?PdfFake $fakeInstance = null;
+
+    /**
+     * Custom driver creator closures.
+     *
+     * @var array<string, \Closure|string>
+     */
+    protected static array $customDrivers = [];
+
+    /**
+     * Register a custom PDF driver creator.
+     */
+    public static function extend(string $driver, \Closure|string $callback): void
+    {
+        static::$customDrivers[strtolower($driver)] = $callback;
+    }
+
+    /**
+     * Get all registered custom driver creators.
+     *
+     * @return array<string, \Closure|string>
+     */
+    public static function getCustomDrivers(): array
+    {
+        return static::$customDrivers;
+    }
 
     /**
      * Activate in-memory PDF testing fake double.

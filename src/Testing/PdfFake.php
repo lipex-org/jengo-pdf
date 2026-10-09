@@ -199,7 +199,7 @@ class PdfFake
      */
     public function assertSaved(string|callable|null $destinationOrCallback = null): void
     {
-        $saved = array_filter($this->recorded, fn($item) => in_array($item['action'], ['save', 'store'], true));
+        $saved = array_filter($this->recorded, fn($item) => in_array($item['action'], ['save', 'store', 'storeAsync'], true));
 
         Assert::assertNotEmpty($saved, 'Failed asserting that any PDF was saved to disk.');
 

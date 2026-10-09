@@ -79,6 +79,11 @@ interface PdfInterface
     public function store(string $path, ?string $disk = null): string;
 
     /**
+     * Dispatch PDF rendering and saving to a background queue.
+     */
+    public function storeAsync(string $path, ?string $disk = null): string|int;
+
+    /**
      * Attach filter field definitions for the interactive preview slide-over drawer.
      *
      * @param array<\Jengo\Pdf\Filtering\FilterField> $filters

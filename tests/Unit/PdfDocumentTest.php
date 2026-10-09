@@ -183,4 +183,44 @@ class PdfDocumentTest extends TestCase
         $doc->pageNumbers('P. {page} / {pages}');
         $this->assertNotNull($doc->getFooter());
     }
+
+    public function testCustomDriverExtensionViaExtend(): void
+    {
+        \Jengo\Pdf\Pdf::extend('custom_weasy', function ($config, $doc) {
+            return new class implements DriverInterface {
+                public function render(PdfDocument $document): string
+                {
+                    return '%PDF-1.4 Custom Driver Rendered';
+                }
+                public function isAvailable(): bool
+                {
+                    return true;
+                }
+                public function getName(): string
+                {
+                    return 'custom_weasy';
+                }
+            };
+        });
+
+        $doc = new PdfDocument();
+        $doc->driver('custom_weasy')->html('<p>Custom Test</p>');
+
+        $this->assertSame('%PDF-1.4 Custom Driver Rendered', $doc->output());
+    }
+
+    public function testStoreAsyncDispatchesJobToQueue(): void
+    {
+        \Jengo\Queues\Facades\Queue::fake();
+
+        $doc = new PdfDocument();
+        $jobId = $doc->html('<h1>Async Report</h1>')->storeAsync('reports/monthly.pdf');
+
+        $this->assertNotEmpty($jobId);
+        \Jengo\Queues\Facades\Queue::assertPushed(\Jengo\Pdf\Jobs\RenderPdfJob::class, function ($job) {
+            return $job->destinationPath === 'reports/monthly.pdf' && $job->html === '<h1>Async Report</h1>';
+        });
+
+        \Jengo\Queues\Facades\Queue::unfake();
+    }
 }

@@ -14,4 +14,11 @@ class TestCase extends CIUnitTestCase
 
         parent::setUp();
     }
+
+    protected function tearDown(): void
+    {
+        \Jengo\Pdf\Pdf::reset();
+
+        parent::tearDown();
+    }
 }

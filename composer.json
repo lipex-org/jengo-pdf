@@ -13,6 +13,7 @@
     "php": "^8.5",
     "codeigniter4/framework": "^4.7",
     "jengo/base": "^1.1",
+    "jengo/queues": "^0.1",
     "dompdf/dompdf": "^3.0"
   },
   "suggest": {
